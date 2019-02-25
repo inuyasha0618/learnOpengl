@@ -60,10 +60,10 @@ testCubeShaderProgram.uniform1i('cubeTex', 0);
 const gBuffer: GBuffer = new GBuffer(gl, SCR_WIDTH, SCR_HEIGHT);
 
 const cubeTexture: WebGLTexture = gl.createTexture();
-loadTex('.../images/wall.jpg', cubeTexture, gl);
+loadTex('../images/wall.jpg', cubeTexture, gl);
 
 const planetTexture: WebGLTexture = gl.createTexture();
-loadTex('.../models/planet_Quom1200.png', planetTexture, gl);
+loadTex('../models/planet_Quom1200.png', planetTexture, gl);
 
 gl.enable(gl.CULL_FACE);
 
@@ -153,8 +153,8 @@ async function fetchObjFile(url: string) {
 
 let dragonMesh: Mesh = null;
 
-// fetchObjFile('.../models/planet.obj').then(({
-fetchObjFile('.../models/Tencent_BinHai.obj').then(({
+// fetchObjFile('../models/planet.obj').then(({
+fetchObjFile('../models/Tencent_BinHai.obj').then(({
     vertPosArray,
     vertUVArray,
     vertNormArray,

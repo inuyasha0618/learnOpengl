@@ -4,7 +4,7 @@ let dragonPosDataArr: Float32Array;
 let dragonNormalDataArr: Float32Array;
 let dragonUVDataArr: Float32Array;
 let dragonVAO: WebGLVertexArrayObject;
-loadObjFile('.../models/TheStanfordDragon.obj').then(({
+loadObjFile('../models/TheStanfordDragon.obj').then(({
     vertex_pos_data,
     output_smooth_normals,
     vertex_uv_data
