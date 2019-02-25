@@ -66,11 +66,11 @@ const planetTexture: WebGLTexture = gl.createTexture();
 loadTex('../models/planet_Quom1200.png', planetTexture, gl);
 
 const stripTexture: WebGLTexture = gl.createTexture();
-loadTex('../images/strip.jpg', stripTexture, gl);
+loadTex('../images/strip2.jpg', stripTexture, gl);
 
 gl.enable(gl.CULL_FACE);
 
-const lightDir: vec3 = vec3.fromValues(1, 0, 0);
+const lightDir: vec3 = vec3.fromValues(-2, 1, -1);
 const lightRotSpeed: number = 5;
 const selfRotSpeed: number = 0;
 let selfRotAngle: number = 0;
@@ -81,6 +81,7 @@ function drawCB(msDt): void {
     const model: mat4 = mat4.create();
     // mat4.rotate(model, model, getRadian(-90), [1, 0, 0]);
     mat4.translate(model, model, [0, -6.0, 0]);
+    mat4.rotateY(model, model, getRadian(-45));
     mat4.rotate(model, model, getRadian(selfRotAngle += selfRotSpeed * msDt * 0.001), [0, 1, 0]);
     // mat4.scale(model, model, [1.5, 1.5, 1.5])
     mat4.scale(model, model, [0.25, 0.25, 0.25])
@@ -130,8 +131,9 @@ function drawCB(msDt): void {
 
     lightingShaderProgram.use();
     // vec3.rotateY(lightDir, lightDir, [0, 0, 0], getRadian(msDt * 0.001 * lightRotSpeed));
-    // lightingShaderProgram.uniform3fv('light_direction', lightDir);
-    lightingShaderProgram.uniform3fv('light_direction', camera.getViewDirection());
+    lightingShaderProgram.uniform3fv('light_direction', lightDir);
+    // lightingShaderProgram.uniform3fv('light_direction', camera.getViewDirection());
+    lightingShaderProgram.uniform3fv('viewPos', camera.position);
     drawQuad(gl);
 
     gl.disable(gl.STENCIL_TEST);
