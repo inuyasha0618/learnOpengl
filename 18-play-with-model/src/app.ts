@@ -74,6 +74,8 @@ const lightDir: vec3 = vec3.fromValues(1, 0, 0);
 const lightRotSpeed: number = 5;
 const selfRotSpeed: number = 0;
 let selfRotAngle: number = 0;
+const uvSpeed: number = -0.1;
+let uvOffset: number = 0;
 function drawCB(msDt): void {
     cubeShaderProgram.use();
     const model: mat4 = mat4.create();
@@ -84,6 +86,10 @@ function drawCB(msDt): void {
     mat4.scale(model, model, [0.25, 0.25, 0.25])
     const view: mat4 = camera.getViewMatrix();
     const perspective: mat4 = camera.getPerspectiveMatrix();
+
+    uvOffset += uvSpeed * msDt * 0.001;
+
+    cubeShaderProgram.uniform1f('texYOffset', uvOffset);
 
     cubeShaderProgram.uniformMatrix4fv('uModel', model);
     cubeShaderProgram.uniformMatrix4fv('uView', view);

@@ -8,9 +8,10 @@ const cubeFrag: string = `
     layout (location = 1) out vec4 fragDiffuse;
     layout (location = 2) out vec4 fragNormal;
     uniform sampler2D cubeTex;
+    uniform float texYOffset;
     void main() {
         fragPos = vec4(vPosWorld, 1.0);
-        fragDiffuse = vec4(texture(cubeTex, vTexcord).rgb, 1.0);
+        fragDiffuse = vec4(texture(cubeTex, vTexcord + vec2(0.0, texYOffset)).rgb, 1.0);
         fragNormal = vec4(vNormal, 1.0);
     }
 `.trim();
