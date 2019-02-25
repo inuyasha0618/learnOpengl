@@ -43,12 +43,12 @@ class Camera {
     near: number;
     far: number;
 
-    constructor(gl: WebGL2RenderingContext, radius: number, yaw: number = YAW, pitch: number = PITCH, near: number = 0.01, far: number = 100) {
+    constructor(gl: WebGL2RenderingContext, radius: number, yaw: number = YAW, pitch: number = PITCH, ratio: number, near: number = 0.01, far: number = 100) {
         this.canvas = gl.canvas;
-        const { left, top, width, height }  = this.canvas.getBoundingClientRect();
+        const { left, top }  = this.canvas.getBoundingClientRect();
         this.canvasLeft = left;
         this.canvasTop = top;
-        this.ratio = width / height;
+        this.ratio = ratio;
         this.near = near;
         this.far = far;
 
@@ -71,6 +71,13 @@ class Camera {
         this.handleMouseLeave = this.handleMouseLeave.bind(this);
 
         this.registerMouseEvent();
+    }
+
+    updateRatio(ratio: number): void {
+        this.ratio = ratio;
+        const { left, top }  = this.canvas.getBoundingClientRect();
+        this.canvasLeft = left;
+        this.canvasTop = top;
     }
 
     updateCameraVectors() {

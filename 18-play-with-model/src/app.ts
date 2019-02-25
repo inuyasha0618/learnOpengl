@@ -31,10 +31,17 @@ if (!gl) {
 }
 gl.getExtension('EXT_color_buffer_float');
 
-const { width: SCR_WIDTH, height: SCR_HEIGHT } = canvas.getBoundingClientRect();
+let SCR_WIDTH = document.documentElement.clientWidth || document.body.clientWidth;
+let SCR_HEIGHT = document.documentElement.clientHeight || document.body.clientHeight;
+
+canvas.width = SCR_WIDTH;
+canvas.height = SCR_HEIGHT;
+canvas.style.width = `${SCR_WIDTH}px`;
+canvas.style.height = `${SCR_HEIGHT}px`;
+// const { width: SCR_WIDTH, height: SCR_HEIGHT } = canvas.getBoundingClientRect();
 gl.viewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
-const camera: OrbitCamera = new OrbitCamera(gl, 15, 0, 0);
+const camera: OrbitCamera = new OrbitCamera(gl, 15, 0, -25, SCR_WIDTH / SCR_HEIGHT);
 
 const cubeShaderProgram: ShaderProgram = new ShaderProgram(gl, cubeVert, cubeFrag, 'cubeShaderProgram');
 cubeShaderProgram.use();
@@ -182,3 +189,18 @@ const looper = new renderLooper(drawCB).start();
 // setInterval(() => {
 //     console.log(`Fps: ${looper.getFps()}`);
 // }, 500);
+
+window.addEventListener('resize', function() {
+    SCR_WIDTH = document.documentElement.clientWidth || document.body.clientWidth;
+    SCR_HEIGHT = document.documentElement.clientHeight || document.body.clientHeight;
+
+    canvas.width = SCR_WIDTH;
+    canvas.height = SCR_HEIGHT;
+    canvas.style.width = `${SCR_WIDTH}px`;
+    canvas.style.height = `${SCR_HEIGHT}px`;
+    gl.viewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+
+    console.log(`SCR_WIDTH: ${SCR_WIDTH} SCR_HEIGHT: ${SCR_HEIGHT}`);
+
+    camera.updateRatio(SCR_WIDTH / SCR_HEIGHT);
+})
