@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            outline: 1px gold solid;
+        }
+    </style>
+    <script id="cube-vertex" type="vetex">
+        #version 300 es
+
+        in vec3 aPos;
+        uniform mat4 uModel;
+        uniform mat4 uView;
+        uniform mat4 uPerspective;
+
+        void main() {
+            gl_Position = uPerspective * uView * uModel * vec4(aPos, 1.0);
+        }
+    </script>
+    <script id="cube-fragment" type="vetex">
+        #version 300 es
+        precision mediump float;
+        uniform vec3 uLightColor;
+        uniform vec3 uColor;
+        out vec4 fragColor;
+
+        void main() {
+            fragColor = vec4(uLightColor * uColor, 1.0);
+        }
+    </script>
+    <script id="lamp-vertex" type="vetex">
+        #version 300 es
+
+        in vec3 aPos;
+        uniform mat4 uModel;
+        uniform mat4 uView;
+        uniform mat4 uPerspective;
+
+        void main() {
+            gl_Position = uPerspective * uView * uModel * vec4(aPos, 1.0);
+        }
+    </script>
+    <script id="lamp-fragment" type="vetex">
+        #version 300 es
+        precision mediump float;
+        out vec4 fragColor;
+
+        void main() {
+            fragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+    </script>
+</head>
+<body>
+    <canvas id='cvs' width="800" height="600"></canvas>
+    <script src="./dist/bundle.js"></script>
+</body>
+</html>

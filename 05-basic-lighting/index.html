@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            outline: 1px gold solid;
+        }
+    </style>
+    <script id="cube-vertex" type="vetex">
+        #version 300 es
+
+        in vec3 aPos;
+        in vec3 aNormal;
+        uniform mat4 uModel;
+        uniform mat4 uView;
+        uniform mat4 uPerspective;
+
+        out vec3 vNormal;
+        out vec3 vFragPos;
+
+        void main() {
+            vNormal = mat3(transpose(inverse(uModel))) * aNormal;
+            vFragPos = vec3(uModel * vec4(aPos, 1.0));
+            gl_Position = uPerspective * uView * uModel * vec4(aPos, 1.0);
+        }
+    </script>
+    <script id="cube-fragment" type="vetex">
+        #version 300 es
+        precision mediump float;
+
+        uniform vec3 uLightPos;
+        uniform vec3 uViewPos;
+        uniform vec3 uLightColor;
+        uniform vec3 uObjectColor;
+        uniform float uShineness;
+
+        in vec3 vNormal;
+        in vec3 vFragPos;
+
+        out vec4 fragColor;
+
+        void main() {
+            float ambientStrength = 0.1;
+            float specularStrength = 0.5;
+
+            vec3 lightDir = normalize(uLightPos - vFragPos);
+            vec3 viewDir = normalize(uViewPos - vFragPos);
+            vec3 normal = normalize(vNormal);
+            vec3 reflectDir = normalize(reflect(-lightDir, normal));
+
+            float diff = max(dot(lightDir, normal), 0.0);
+            float spec = pow(max(dot(reflectDir, viewDir), 0.0), uShineness);
+            // float spec = pow(max(dot(normalize(-lightDir + viewDir), normal), 0.0), uShineness);
+
+            vec3 ambient = uLightColor * uObjectColor * ambientStrength;
+            vec3 diffuse = uLightColor * uObjectColor * diff;
+            vec3 specular = uLightColor * uObjectColor * spec * specularStrength;
+            fragColor = vec4(ambient + diffuse + specular, 1.0);
+        }
+    </script>
+    <script id="lamp-vertex" type="vetex">
+        #version 300 es
+
+        in vec3 aPos;
+        uniform mat4 uModel;
+        uniform mat4 uView;
+        uniform mat4 uPerspective;
+
+        void main() {
+            gl_Position = uPerspective * uView * uModel * vec4(aPos, 1.0);
+        }
+    </script>
+    <script id="lamp-fragment" type="vetex">
+        #version 300 es
+        precision mediump float;
+        out vec4 fragColor;
+
+        void main() {
+            fragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+    </script>
+</head>
+<body>
+    <canvas id='cvs' width="800" height="600"></canvas>
+    <script src="./dist/bundle.js"></script>
+</body>
+</html>
