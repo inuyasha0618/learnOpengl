@@ -37,10 +37,14 @@ gl.enable(gl.CULL_FACE);
 
 const uvSpeed: number = -0.1;
 let uvOffset: number = 0;
+let opacity = 0.0;
+let opacitySpeed = 0.05;
 function drawCB(msDt: number): void {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     uvOffset += uvSpeed * msDt * 0.001;
+
+    camera.addYaw(0.5);
     const view: mat4 = camera.getViewMatrix();
     const perspective: mat4 = camera.getPerspectiveMatrix();
     const model: mat4 = mat4.create();
@@ -53,6 +57,17 @@ function drawCB(msDt: number): void {
     phongShaderProgram.uniformMatrix4fv('uPerspective', perspective);
     phongShaderProgram.uniform3fv('viewPos', camera.position);
     phongShaderProgram.uniform1f('yOffset', uvOffset);
+
+    if (opacity >= 1.0) {
+        opacitySpeed = -0.05;
+    } else if (opacity <= 0.0) {
+        opacitySpeed = 0.05;
+    }
+
+    opacity += opacitySpeed * msDt * 0.001;
+
+    // phongShaderProgram.uniform1f('opacity', opacity);
+    phongShaderProgram.uniform1f('opacity', 0.1);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, buildingTexture);

@@ -5,6 +5,7 @@ const phongFragSrc: string = `
     uniform vec3 viewPos;
     uniform sampler2D tex;
     uniform float yOffset;
+    uniform float opacity;
     in vec3 vPosWorld;
     in vec3 vNormal;
     in vec2 vTexcord;
@@ -30,7 +31,7 @@ const phongFragSrc: string = `
         vec3 ambientColor = vec3(0.15, 0.15, 0.15);
         vec3 diffuseColor = lightColor * baseColor * diff;
 
-        fragColor = vec4(ambientColor + diffuseColor + specular, 0.3);
+        fragColor = vec4(ambientColor + diffuseColor + specular, opacity);
     }
 `.trim();
 export default phongFragSrc;

@@ -43,7 +43,7 @@ class Camera {
     near: number;
     far: number;
 
-    constructor(gl: WebGL2RenderingContext, radius: number, yaw: number = YAW, pitch: number = PITCH, ratio: number, near: number = 0.01, far: number = 100) {
+    constructor(gl: WebGL2RenderingContext, radius: number, yaw: number = YAW, pitch: number = PITCH, ratio: number, near: number = 1, far: number = 100) {
         this.canvas = gl.canvas;
         const { left, top }  = this.canvas.getBoundingClientRect();
         this.canvasLeft = left;
@@ -151,6 +151,16 @@ class Camera {
         }
 
         // Update Front, Right and Up Vectors using the updated Euler angles
+        this.updateCameraVectors();
+    }
+
+    addYaw(delta: number): void {
+        this.yaw += delta;
+        this.updateCameraVectors();
+    }
+
+    addPitch(delta: number): void {
+        this.pitch += delta;
         this.updateCameraVectors();
     }
 
