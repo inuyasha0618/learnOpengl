@@ -13,6 +13,8 @@ function resizeCvs2Screen(gl: WebGL2RenderingContext): Output {
     cvs.style.width = `${SCR_WIDTH}px`;
     cvs.style.height = `${SCR_HEIGHT}px`;
 
+    gl.viewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+
     return {
         width: SCR_WIDTH,
         height: SCR_HEIGHT

@@ -29,10 +29,8 @@ fetchObjFile('../models/Tencent_BinHai.obj').then(function({vertPosArray, vertUV
 
 // 创建相机
 const camera: OrbitCamera = new OrbitCamera(gl, 15, 0, -25, SCR_WIDTH / SCR_HEIGHT);
-gl.viewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
-
 
 const uvSpeed: number = -0.1;
 let uvOffset: number = 0;
@@ -61,3 +59,8 @@ function drawCB(msDt: number): void {
 
 
 const looper = new RenderLooper(drawCB).start();
+
+window.addEventListener('resize', function() {
+    const { width, height } = resizeCvs2Screen(gl);
+    camera.updateRatio(width / height);
+}, false);
