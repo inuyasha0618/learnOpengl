@@ -31,6 +31,9 @@ fetchObjFile('../models/Tencent_BinHai.obj').then(function({vertPosArray, vertUV
 const camera: OrbitCamera = new OrbitCamera(gl, 15, 0, -25, SCR_WIDTH / SCR_HEIGHT);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
+gl.enable(gl.BLEND);
+gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+gl.enable(gl.CULL_FACE);
 
 const uvSpeed: number = -0.1;
 let uvOffset: number = 0;
@@ -54,6 +57,10 @@ function drawCB(msDt: number): void {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, buildingTexture);
 
+    gl.cullFace(gl.FRONT);
+    buildingMesh.draw();
+
+    gl.cullFace(gl.BACK);
     buildingMesh.draw();
 }
 

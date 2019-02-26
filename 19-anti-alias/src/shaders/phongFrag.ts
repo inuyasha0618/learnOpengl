@@ -30,7 +30,7 @@ const phongFragSrc: string = `
         vec3 ambientColor = vec3(0.15, 0.15, 0.15);
         vec3 diffuseColor = lightColor * baseColor * diff;
 
-        fragColor = vec4(ambientColor + diffuseColor + specular, 1.0);
+        fragColor = vec4(ambientColor + diffuseColor + specular, 0.3);
     }
 `.trim();
 export default phongFragSrc;
