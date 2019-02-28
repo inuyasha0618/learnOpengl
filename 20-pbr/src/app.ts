@@ -32,7 +32,7 @@ const pbrShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, pbrF
 pbrShaderProgram.use();
 pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.0, 0.0]));
 pbrShaderProgram.uniform1f('ao', 1.0);
-pbrShaderProgram.uniform1f('roughness', 0.5);
+pbrShaderProgram.uniform1f('roughness', 0.3);
 pbrShaderProgram.uniform1f('metallic', 0.0);
 
 const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, lightFrag, 'lightShaderProgram');
