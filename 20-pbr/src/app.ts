@@ -35,17 +35,21 @@ pbrShaderProgram.uniform1f('ao', 1.0);
 pbrShaderProgram.uniform1f('roughness', 0.3);
 pbrShaderProgram.uniform1f('metallic', 1.0);
 
-const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, lightFrag, 'lightShaderProgram');
-
 for (let i = 0; i < 4; i++) {
     pbrShaderProgram.uniform3fv(`lightPositions[${i}]`, lightPositions[i]);
     pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
 }
 
+const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, lightFrag, 'lightShaderProgram');
+lightShaderProgram.use();
+lightShaderProgram.uniform1i('tex', 0);
+
 const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
 // 加载楼房所使用的高光贴图
 const buildingTexture: Texture = new Texture(gl, '../images/strip2.jpg', gl.REPEAT, gl.REPEAT);
+
+const lightTexture: Texture = new Texture(gl, '../images/wall.jpg', gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE);
 
 // 创建楼体mesh
 let buildingMesh: Mesh = new Mesh();
@@ -87,7 +91,10 @@ function drawCB(msDt: number): void {
         mat4.translate(model, model, pos);
         lightShaderProgram.uniformMatrix4fv('uModel', model);
         lightShaderProgram.uniform3fv('lightColor', lightColors[i]);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, lightTexture.tex);
         drawCube(gl);
+        gl.bindTexture(gl.TEXTURE_2D, null);
     }
 }
 
