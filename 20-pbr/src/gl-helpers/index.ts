@@ -11,3 +11,4 @@ export { default as drawCube } from './drawCube';
 export { default as drawQuad } from './drawQuad';
 export { default as drawQuadDepthOne } from './drawQuadDepthOne';
 export { default as ObjLoader } from './ObjLoader';
+export { default as Texture } from './Texture';
