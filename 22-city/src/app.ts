@@ -3,7 +3,6 @@ import RenderLooper from 'render-looper';
 import { getContext, fetchObjFile, resizeCvs2Screen, getRadian } from './utils/index';
 import { ShaderProgram, Mesh, loadTex, OrbitCamera, Texture, drawCube, ObjMesh } from './gl-helpers/index';
 import phongVertSrc from './shaders/phongVert';
-import phongFragSrc from './shaders/phongFrag';
 import pbrFrag from './shaders/pbrFrag';
 import lightFrag from './shaders/lightFrag';
 
@@ -46,23 +45,20 @@ lightShaderProgram.uniform1i('tex', 0);
 
 const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
-// 加载楼房所使用的高光贴图
-const buildingTexture: Texture = new Texture(gl, '../images/strip2.jpg', gl.REPEAT, gl.REPEAT);
-
 const lightTexture: Texture = new Texture(gl, '../images/wall.jpg', gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE);
 
 // 创建楼体mesh
 const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
 
 // 创建相机
-const camera: OrbitCamera = new OrbitCamera(gl, 15, 0, -25, SCR_WIDTH / SCR_HEIGHT);
+const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, 0, SCR_WIDTH / SCR_HEIGHT);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
 function drawCB(msDt: number): void {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    camera.addYaw(0.5);
+    // camera.addYaw(0.5);
     const view: mat4 = camera.getViewMatrix();
     const perspective: mat4 = camera.getPerspectiveMatrix();
     const model: mat4 = mat4.create();
@@ -93,8 +89,69 @@ function drawCB(msDt: number): void {
         drawCube(gl);
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
+
+    lightShaderProgram.uniform3fv('lightColor', new Float32Array([100.0, 100.0, 100.0]));
+    for (let model of buildingPoses) {
+        lightShaderProgram.uniformMatrix4fv('uModel', model);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, lightTexture.tex);
+        drawCube(gl);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
 }
 
+interface Pos {
+    x: number;
+    y: number;
+}
+
+const gridCnts: number = 20;
+const buildingPoses: Array<mat4> = [];
+function getRandom(start: number, end: number): number {
+    return start + (end - start) * Math.random();
+}
+
+function generateBuildingPos(gridSize: number, gridCnts: number) {
+    const halfWidth: number = gridSize * gridCnts * 0.5;
+    console.log(halfWidth);
+    // 列主序！！！
+    const w2Checkerboard: mat4 = mat4.fromValues(
+        1, 0, 0, 0,
+        0, 0, 1, 0,
+        0, -1, 0, 0,
+        -halfWidth, 0, -halfWidth, 1
+    );
+
+    
+    for (let row = 0; row < gridCnts; row++) {
+        for (let column = 0; column < gridCnts; column++) {
+            const localMx: mat4 = mat4.create();
+            mat4.translate(localMx, localMx, [column * gridSize + 0.5 * gridSize, row * gridSize + 0.5 * gridSize, 0]);
+            mat4.scale(localMx, localMx, [gridSize, gridSize, gridSize]);
+            mat4.scale(localMx, localMx, [getRandom(0.5, 1.0), getRandom(0.5, 1.0), 1.0])
+            mat4.scale(localMx, localMx, [0.5, 0.5, 0.5]);
+            mat4.translate(localMx, localMx, [0, 0, -1]);
+            const finalModelMx: mat4 = mat4.create();
+            console.log('w2Checkerboard', w2Checkerboard);
+            console.log('localMx', localMx);
+            mat4.multiply(finalModelMx, w2Checkerboard, localMx);
+            console.log('result', finalModelMx)
+            buildingPoses.push(finalModelMx);
+        }
+    }    
+}
+
+generateBuildingPos(5, gridCnts);
+
+function drawBuildings(): void {
+    for (let model of buildingPoses) {
+        lightShaderProgram.uniformMatrix4fv('uModel', model);
+        lightShaderProgram.uniform3fv('lightColor', new Float32Array([10.0, 10.0, 10.0]));
+        drawCube(gl);
+    }
+}
+
+window.mat4 = mat4;
 
 const looper = new RenderLooper(drawCB).start();
 
@@ -103,10 +160,10 @@ window.addEventListener('resize', function() {
     camera.updateRatio(width / height);
 }, false);
 
-Object.assign(window, {
-    gl
-})
+// Object.assign(window, {
+//     gl
+// })
 
-setInterval(function() {
-    console.log('fps: ', looper.getFps());
-}, 1000);
+// setInterval(function() {
+//     console.log('fps: ', looper.getFps());
+// }, 1000);
