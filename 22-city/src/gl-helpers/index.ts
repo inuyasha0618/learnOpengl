@@ -8,6 +8,7 @@ export { default as createFrameBuffer } from './createFrameBuffer';
 export { default as loadTex } from './loadTex';
 export { default as GBuffer } from './GBuffer';
 export { default as drawCube } from './drawCube';
+export { default as drawFakeBuilding } from './drawFakeBuilding';
 // export { default as drawDragon } from './drawDragon';
 export { default as drawQuad } from './drawQuad';
 export { default as drawQuadDepthOne } from './drawQuadDepthOne';

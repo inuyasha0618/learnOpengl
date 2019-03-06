@@ -1,7 +1,7 @@
 import { vec3, mat4 } from 'gl-matrix';
 import RenderLooper from 'render-looper';
 import { getContext, fetchObjFile, resizeCvs2Screen, getRadian } from './utils/index';
-import { ShaderProgram, Mesh, loadTex, OrbitCamera, Texture, drawCube, ObjMesh } from './gl-helpers/index';
+import { ShaderProgram, Mesh, loadTex, OrbitCamera, Texture, drawCube, ObjMesh, drawFakeBuilding } from './gl-helpers/index';
 import phongVertSrc from './shaders/phongVert';
 import pbrFrag from './shaders/pbrFrag';
 import lightFrag from './shaders/lightFrag';
@@ -58,9 +58,10 @@ gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
 function drawCB(msDt: number): void {
+    let drawCallCnts = 0;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // camera.addYaw(0.5);
+    camera.addYaw(0.5);
     const view: mat4 = camera.getViewMatrix();
     const perspective: mat4 = camera.getPerspectiveMatrix();
     const model: mat4 = mat4.create();
@@ -75,6 +76,7 @@ function drawCB(msDt: number): void {
     pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
 
     buildingMesh.draw();
+    ++drawCallCnts;
 
     // 画出光源的位置
     lightShaderProgram.use();
@@ -90,18 +92,24 @@ function drawCB(msDt: number): void {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, lightTexture.tex);
         drawCube(gl);
+        ++drawCallCnts;
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
+    // 画建筑
     pbrShaderProgram.use();
     pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.0, 0.0]));
     for (let model of buildingPoses) {
         pbrShaderProgram.uniformMatrix4fv('uModel', model);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, lightTexture.tex);
-        drawCube(gl);
+        // drawCube(gl);
+        drawFakeBuilding(gl);
+        ++drawCallCnts;
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
+
+    // console.log('drawCallCnts: ', drawCallCnts);
 }
 
 interface Pos {
@@ -133,10 +141,10 @@ function generateBuildingPos(gridSize: number, gridCnts: number) {
             if (row >= discard -2 && row <= discard && column >= discard - 2 && column <= discard) continue;
             const localMx: mat4 = mat4.create();
             mat4.translate(localMx, localMx, [column * gridSize + 0.5 * gridSize, row * gridSize + 0.5 * gridSize, 0]);
+            mat4.rotateX(localMx, localMx, getRadian(-90));
+            mat4.rotateY(localMx, localMx, getRadian(90 * Math.random()));
             mat4.scale(localMx, localMx, [0.5 * gridSize, 0.5 * gridSize, 0.5 * gridSize]);
-            mat4.rotateZ(localMx, localMx, getRadian(90 * Math.random()));
-            mat4.scale(localMx, localMx, [getRandom(0.3, 0.5), getRandom(0.4, 0.6), getRandom(0.5, 1.0)])
-            mat4.translate(localMx, localMx, [0, 0, -1]);
+            mat4.scale(localMx, localMx, [getRandom(0.3, 0.5), getRandom(0.5, 1.0), getRandom(0.4, 0.6)])
             const finalModelMx: mat4 = mat4.create();
             mat4.multiply(finalModelMx, w2Checkerboard, localMx);
             buildingPoses.push(finalModelMx);
@@ -146,26 +154,12 @@ function generateBuildingPos(gridSize: number, gridCnts: number) {
 
 generateBuildingPos(5, gridCnts);
 
-function drawBuildings(): void {
-    for (let model of buildingPoses) {
-        lightShaderProgram.uniformMatrix4fv('uModel', model);
-        lightShaderProgram.uniform3fv('lightColor', new Float32Array([10.0, 10.0, 10.0]));
-        drawCube(gl);
-    }
-}
-
-window.mat4 = mat4;
-
 const looper = new RenderLooper(drawCB).start();
 
 window.addEventListener('resize', function() {
     const { width, height } = resizeCvs2Screen(gl);
     camera.updateRatio(width / height);
 }, false);
-
-// Object.assign(window, {
-//     gl
-// })
 
 setInterval(function() {
     console.log('fps: ', looper.getFps());
