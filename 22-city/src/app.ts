@@ -51,7 +51,7 @@ const lightTexture: Texture = new Texture(gl, '../images/wall.jpg', gl.CLAMP_TO_
 const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
 
 // 创建相机
-const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, 0, SCR_WIDTH / SCR_HEIGHT);
+const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, -30, SCR_WIDTH / SCR_HEIGHT);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
@@ -91,8 +91,9 @@ function drawCB(msDt: number): void {
     }
 
     lightShaderProgram.uniform3fv('lightColor', new Float32Array([100.0, 100.0, 100.0]));
+    pbrShaderProgram.use();
     for (let model of buildingPoses) {
-        lightShaderProgram.uniformMatrix4fv('uModel', model);
+        pbrShaderProgram.uniformMatrix4fv('uModel', model);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, lightTexture.tex);
         drawCube(gl);
@@ -164,6 +165,6 @@ window.addEventListener('resize', function() {
 //     gl
 // })
 
-// setInterval(function() {
-//     console.log('fps: ', looper.getFps());
-// }, 1000);
+setInterval(function() {
+    console.log('fps: ', looper.getFps());
+}, 1000);
