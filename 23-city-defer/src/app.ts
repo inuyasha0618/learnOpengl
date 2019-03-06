@@ -1,13 +1,15 @@
 import { vec3, mat4, vec2 } from 'gl-matrix';
 import RenderLooper from 'render-looper';
 import { getContext, fetchObjFile, resizeCvs2Screen, getRadian } from './utils/index';
-import { ShaderProgram, Mesh, loadTex, OrbitCamera, Texture, drawCube, ObjMesh, drawFakeBuilding } from './gl-helpers/index';
+import { ShaderProgram, OrbitCamera, Texture, drawCube, ObjMesh, drawFakeBuilding, GBuffer, drawQuad } from './gl-helpers/index';
 import phongVertSrc from './shaders/phongVert';
 import pbrFrag from './shaders/pbrFrag';
 import lightFrag from './shaders/lightFrag';
 import lightVert from './shaders/lightVert';
 import quadFrag from './shaders/quadFrag';
 import quadVert from './shaders/quadVert';
+import geoVert from './shaders/geoVert';
+import geoFrag from './shaders/geoFrag';
 
 const lightPositions: Array<Float32Array> = [
     new Float32Array([-10.0, 10.0, 10.0]),
@@ -16,7 +18,7 @@ const lightPositions: Array<Float32Array> = [
     new Float32Array([10.0, -10.0, 10.0]),
 ]
 
-const lightWeight: number = 50.0;
+const lightWeight: number = 500.0;
 
 const lightColors: Array<Float32Array> = [
     new Float32Array([lightWeight, lightWeight, lightWeight]),
@@ -29,9 +31,9 @@ const gl: WebGL2RenderingContext = getContext('#cvs');
 gl.getExtension('EXT_color_buffer_float');
 
 // 获得屏幕尺寸
+const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
 // 创建shaderprogram
-
 const pbrShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, pbrFrag, 'pbrShaderProgram');
 pbrShaderProgram.use();
 pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
@@ -39,15 +41,38 @@ pbrShaderProgram.uniform1f('ao', 1.0);
 pbrShaderProgram.uniform1f('roughness', 0.3);
 pbrShaderProgram.uniform1f('metallic', 1.0);
 
+// TODO: 创建geo pass的shader program
+const geoShaderProgram: ShaderProgram = new ShaderProgram(gl, geoVert, geoFrag, 'geoShaderProgram');
+geoShaderProgram.use();
+geoShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
+geoShaderProgram.uniform1f('ao', 1.0);
+geoShaderProgram.uniform1f('roughness', 0.3);
+geoShaderProgram.uniform1f('metallic', 1.0);
+
+// TODO: 创建pbr lighting pass的shader program
+const lightingShaderProgram: ShaderProgram = new ShaderProgram(gl, quadVert, pbrFrag, 'lightingShaderProgram');
+lightingShaderProgram.use();
+lightingShaderProgram.uniform1i('posTex', 0);
+lightingShaderProgram.uniform1i('albedoTex', 1);
+lightingShaderProgram.uniform1i('normalTex', 2);
+lightingShaderProgram.uniform1i('metalTex', 3);
+lightingShaderProgram.uniform1i('roughnessTex', 4);
+lightingShaderProgram.uniform1i('aoTex', 5);
+lightingShaderProgram.uniform2f('screenSize', SCR_WIDTH, SCR_HEIGHT);
+
 for (let i = 0; i < 4; i++) {
-    pbrShaderProgram.uniform3fv(`lightPositions[${i}]`, lightPositions[i]);
-    pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
+    lightingShaderProgram.uniform3fv(`lightPositions[${i}]`, lightPositions[i]);
+    lightingShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
 }
 
-const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, lightVert, lightFrag, 'lightShaderProgram');
-lightShaderProgram.use();
+// TODO: 最终输出使用的shader program
+const outputShaderProgram: ShaderProgram = new ShaderProgram(gl, quadVert, quadFrag, 'outputShaderProgram');
+outputShaderProgram.use();
+outputShaderProgram.uniform1i('tex', 0);
+outputShaderProgram.uniform2f('screenSize', SCR_WIDTH, SCR_HEIGHT);
 
-const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
+
+const gBuffer: GBuffer = new GBuffer(gl, SCR_WIDTH, SCR_HEIGHT);
 
 const lightTexture: Texture = new Texture(gl, '../images/wall.jpg', gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE);
 
@@ -55,79 +80,55 @@ const lightTexture: Texture = new Texture(gl, '../images/wall.jpg', gl.CLAMP_TO_
 const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
 
 // 创建相机
-const camera: OrbitCamera = new OrbitCamera(gl, 505, 0, -30, SCR_WIDTH / SCR_HEIGHT);
+const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, -30, SCR_WIDTH / SCR_HEIGHT);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
 function drawCB(msDt: number, totalTime: number): void {
-    let drawCallCnts = 0;
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     camera.addYaw(0.1);
     const view: mat4 = camera.getViewMatrix();
     const perspective: mat4 = camera.getPerspectiveMatrix();
+
+    // 几何pass
+    gBuffer.setForGeomPass();
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    geoShaderProgram.use();
+    // 绘制腾讯大楼
     const model: mat4 = mat4.create();
     mat4.rotateY(model, model, getRadian(-45));
-    mat4.scale(model, model, [1.25, 1.25, 1.25]);
-
-    pbrShaderProgram.use();
-    pbrShaderProgram.uniformMatrix4fv('uModel', model);
-    pbrShaderProgram.uniformMatrix4fv('uView', view);
-    pbrShaderProgram.uniformMatrix4fv('uPerspective', perspective);
-    pbrShaderProgram.uniform3fv('camPos', camera.position);
-    pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
+    mat4.scale(model, model, [0.25, 0.25, 0.25]);
+    geoShaderProgram.uniformMatrix4fv('uModel', model);
+    geoShaderProgram.uniformMatrix4fv('uView', view);
+    geoShaderProgram.uniformMatrix4fv('uPerspective', perspective);
+    geoShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));    
 
     buildingMesh.draw();
-    ++drawCallCnts;
-
-    // 画出光源的位置
-    lightShaderProgram.use();
-    lightShaderProgram.uniformMatrix4fv('uView', view);
-    lightShaderProgram.uniformMatrix4fv('uPerspective', perspective);
-    for (let i = 0; i < 4; i++) {
-        const model: mat4 = mat4.create();
-        const pos: vec3 = vec3.fromValues(lightPositions[i][0], lightPositions[i][1], lightPositions[i][2]);
-        mat4.translate(model, model, pos);
-        mat4.scale(model, model, [0.3, 0.3, 0.3]);
-        lightShaderProgram.uniformMatrix4fv('uModel', model);
-        lightShaderProgram.uniform3fv('lightColor', lightColors[i]);
-        drawCube(gl);
-        ++drawCallCnts;
-        gl.bindTexture(gl.TEXTURE_2D, null);
-    }
-
-    for (let light of freeLights) {
-        const model: mat4 = mat4.create();
-        const pos: vec3 = light.lightPos;
-        mat4.translate(model, model, pos);
-        mat4.scale(model, model, [0.3, 0.3, 0.3]);
-        lightShaderProgram.uniformMatrix4fv('uModel', model);
-        lightShaderProgram.uniform3fv('lightColor', light.lightColor);
-        lightShaderProgram.uniform2i('uId', light.lightId[0], light.lightId[1]);
-        lightShaderProgram.uniform1f('uTime', totalTime * 0.001);
-        drawCube(gl);
-        ++drawCallCnts;
-        gl.bindTexture(gl.TEXTURE_2D, null);
-    }
 
     // 画建筑
-    pbrShaderProgram.use();
-    pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.0, 0.0]));
+    geoShaderProgram.use();
+    geoShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.0, 0.0]));
     for (let model of buildingPoses) {
-        pbrShaderProgram.uniformMatrix4fv('uModel', model);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, lightTexture.tex);
-        // drawCube(gl);
+        geoShaderProgram.uniformMatrix4fv('uModel', model);
         drawFakeBuilding(gl);
-        ++drawCallCnts;
-        gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
-    // console.log('drawCallCnts: ', drawCallCnts);
+    // 光照pass
+    gBuffer.setForLightingPass();
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    lightingShaderProgram.use();
+    lightingShaderProgram.uniform3fv('camPos', camera.position);
+    drawQuad(gl);
+
+    gBuffer.setForOutput();
+    outputShaderProgram.use();
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    drawQuad(gl);
 }
 
 const gridCnts: number = 30;
-const gridSize: number = 50;
+// const gridSize: number = 50;
+const gridSize: number = 5;
 const buildingPoses: Array<mat4> = [];
 function getRandom(start: number, end: number): number {
     return start + (end - start) * Math.random();
@@ -201,6 +202,6 @@ window.addEventListener('resize', function() {
     camera.updateRatio(width / height);
 }, false);
 
-setInterval(function() {
-    console.log('fps: ', looper.getFps());
-}, 1000);
+// setInterval(function() {
+//     console.log('fps: ', looper.getFps());
+// }, 1000);

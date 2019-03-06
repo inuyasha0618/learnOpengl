@@ -126,15 +126,15 @@ function drawCB(msDt): void {
 
     gl.depthMask(true);
     gl.enable(gl.DEPTH_TEST);
-    testCubeShaderProgram.use();
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, cubeTexture);
-    const cubeModel: mat4 = mat4.create();
-    // mat4.translate(cubeModel, cubeModel, [0, 0, -1]);
-    mat4.scale(cubeModel, cubeModel, [1.6, 2.5, 2.5]);
-    testCubeShaderProgram.uniformMatrix4fv('uModel', cubeModel);
-    testCubeShaderProgram.uniformMatrix4fv('uView', view);
-    testCubeShaderProgram.uniformMatrix4fv('uPerspective', perspective);
+    // testCubeShaderProgram.use();
+    // gl.activeTexture(gl.TEXTURE0);
+    // gl.bindTexture(gl.TEXTURE_2D, cubeTexture);
+    // const cubeModel: mat4 = mat4.create();
+    // // mat4.translate(cubeModel, cubeModel, [0, 0, -1]);
+    // mat4.scale(cubeModel, cubeModel, [1.6, 2.5, 2.5]);
+    // testCubeShaderProgram.uniformMatrix4fv('uModel', cubeModel);
+    // testCubeShaderProgram.uniformMatrix4fv('uView', view);
+    // testCubeShaderProgram.uniformMatrix4fv('uPerspective', perspective);
     // drawCube(gl);
     
     gl.bindTexture(gl.TEXTURE_2D, null);
