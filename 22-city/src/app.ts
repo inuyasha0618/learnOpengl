@@ -13,7 +13,7 @@ const lightPositions: Array<Float32Array> = [
     new Float32Array([10.0, -10.0, 10.0]),
 ]
 
-const lightWeight: number = 300.0;
+const lightWeight: number = 500.0;
 
 const lightColors: Array<Float32Array> = [
     new Float32Array([lightWeight, lightWeight, lightWeight]),
@@ -31,7 +31,7 @@ gl.getExtension('EXT_color_buffer_float');
 
 const pbrShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, pbrFrag, 'pbrShaderProgram');
 pbrShaderProgram.use();
-pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.0, 0.0]));
+pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
 pbrShaderProgram.uniform1f('ao', 1.0);
 pbrShaderProgram.uniform1f('roughness', 0.3);
 pbrShaderProgram.uniform1f('metallic', 1.0);
@@ -64,7 +64,6 @@ function drawCB(msDt: number): void {
     const view: mat4 = camera.getViewMatrix();
     const perspective: mat4 = camera.getPerspectiveMatrix();
     const model: mat4 = mat4.create();
-    mat4.translate(model, model, [0, -6.0, 0]);
     mat4.rotateY(model, model, getRadian(-45));
     mat4.scale(model, model, [0.25, 0.25, 0.25]);
 
@@ -73,6 +72,7 @@ function drawCB(msDt: number): void {
     pbrShaderProgram.uniformMatrix4fv('uView', view);
     pbrShaderProgram.uniformMatrix4fv('uPerspective', perspective);
     pbrShaderProgram.uniform3fv('camPos', camera.position);
+    pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
 
     buildingMesh.draw();
 
@@ -84,6 +84,7 @@ function drawCB(msDt: number): void {
         const model: mat4 = mat4.create();
         const pos: vec3 = vec3.fromValues(lightPositions[i][0], lightPositions[i][1], lightPositions[i][2]);
         mat4.translate(model, model, pos);
+        mat4.scale(model, model, [0.3, 0.3, 0.3]);
         lightShaderProgram.uniformMatrix4fv('uModel', model);
         lightShaderProgram.uniform3fv('lightColor', lightColors[i]);
         gl.activeTexture(gl.TEXTURE0);
@@ -92,8 +93,8 @@ function drawCB(msDt: number): void {
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
-    lightShaderProgram.uniform3fv('lightColor', new Float32Array([100.0, 100.0, 100.0]));
     pbrShaderProgram.use();
+    pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.0, 0.0]));
     for (let model of buildingPoses) {
         pbrShaderProgram.uniformMatrix4fv('uModel', model);
         gl.activeTexture(gl.TEXTURE0);
@@ -124,21 +125,20 @@ function generateBuildingPos(gridSize: number, gridCnts: number) {
         0, -1, 0, 0,
         -halfWidth, 0, -halfWidth, 1
     );
-
+    
+    const discard: number = Math.floor(gridCnts * 0.5);
     
     for (let row = 0; row < gridCnts; row++) {
         for (let column = 0; column < gridCnts; column++) {
+            if (row >= discard -2 && row <= discard && column >= discard - 2 && column <= discard) continue;
             const localMx: mat4 = mat4.create();
             mat4.translate(localMx, localMx, [column * gridSize + 0.5 * gridSize, row * gridSize + 0.5 * gridSize, 0]);
-            mat4.scale(localMx, localMx, [gridSize, gridSize, gridSize]);
-            mat4.scale(localMx, localMx, [getRandom(0.5, 1.0), getRandom(0.5, 1.0), 1.0])
-            mat4.scale(localMx, localMx, [0.5, 0.5, 0.5]);
+            mat4.scale(localMx, localMx, [0.5 * gridSize, 0.5 * gridSize, 0.5 * gridSize]);
+            mat4.rotateZ(localMx, localMx, getRadian(90 * Math.random()));
+            mat4.scale(localMx, localMx, [getRandom(0.3, 0.5), getRandom(0.4, 0.6), getRandom(0.5, 1.0)])
             mat4.translate(localMx, localMx, [0, 0, -1]);
             const finalModelMx: mat4 = mat4.create();
-            console.log('w2Checkerboard', w2Checkerboard);
-            console.log('localMx', localMx);
             mat4.multiply(finalModelMx, w2Checkerboard, localMx);
-            console.log('result', finalModelMx)
             buildingPoses.push(finalModelMx);
         }
     }    
