@@ -33,14 +33,6 @@ gl.getExtension('EXT_color_buffer_float');
 // 获得屏幕尺寸
 const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
-// 创建shaderprogram
-const pbrShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, pbrFrag, 'pbrShaderProgram');
-pbrShaderProgram.use();
-pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
-pbrShaderProgram.uniform1f('ao', 1.0);
-pbrShaderProgram.uniform1f('roughness', 0.3);
-pbrShaderProgram.uniform1f('metallic', 1.0);
-
 // TODO: 创建geo pass的shader program
 const geoShaderProgram: ShaderProgram = new ShaderProgram(gl, geoVert, geoFrag, 'geoShaderProgram');
 geoShaderProgram.use();
@@ -73,8 +65,6 @@ outputShaderProgram.uniform2f('screenSize', SCR_WIDTH, SCR_HEIGHT);
 
 
 const gBuffer: GBuffer = new GBuffer(gl, SCR_WIDTH, SCR_HEIGHT);
-
-const lightTexture: Texture = new Texture(gl, '../images/wall.jpg', gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE);
 
 // 创建楼体mesh
 const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
@@ -127,7 +117,6 @@ function drawCB(msDt: number, totalTime: number): void {
 }
 
 const gridCnts: number = 30;
-// const gridSize: number = 50;
 const gridSize: number = 5;
 const buildingPoses: Array<mat4> = [];
 function getRandom(start: number, end: number): number {
@@ -202,6 +191,6 @@ window.addEventListener('resize', function() {
     camera.updateRatio(width / height);
 }, false);
 
-// setInterval(function() {
-//     console.log('fps: ', looper.getFps());
-// }, 1000);
+setInterval(function() {
+    console.log('fps: ', looper.getFps());
+}, 1000);
