@@ -173,9 +173,9 @@ function generateLights(gridSize: number, gridCnts: number, freeLights: Array<Li
                 const pos: vec3 = vec3.fromValues(-halfWidth + col * gridSize, 5, -halfWidth + row * gridSize)
                 const currentIdx: number = row * gridCnts + col;
                 const lightColor: vec3 = vec3.fromValues(
-                    Math.sin(3.45 * currentIdx * 0.01) * 0.5 + 0.5,
-                    Math.sin(6.56 * currentIdx * 0.01) * 0.5 + 0.5,
-                    Math.sin(8.78 * currentIdx * 0.01) * 0.5 + 0.5,
+                    (Math.sin(3.45 * currentIdx * 0.01) * 0.5 + 0.5) * 10,
+                    (Math.sin(6.56 * currentIdx * 0.01) * 0.5 + 0.5) * 10,
+                    (Math.sin(8.78 * currentIdx * 0.01) * 0.5 + 0.5) * 10,
                 )
                 freeLights.push({
                     lightPos: pos,
