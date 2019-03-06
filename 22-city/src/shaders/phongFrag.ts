@@ -28,8 +28,8 @@ const phongFragSrc: string = `
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
         vec3 specular = specularStrength * spec * lightColor;
 
-        // vec3 ambientColor = vec3(0.15, 0.15, 0.15);
-        vec3 ambientColor = vec3(0.0, 0.0, 0.0);
+        vec3 ambientColor = vec3(0.15, 0.15, 0.15);
+        // vec3 ambientColor = vec3(0.0, 0.0, 0.0);
         vec3 diffuseColor = lightColor * baseColor * diff;
 
         fragColor = vec4(ambientColor + diffuseColor + specular, opacity);

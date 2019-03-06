@@ -13,11 +13,13 @@ const lightPositions: Array<Float32Array> = [
     new Float32Array([10.0, -10.0, 10.0]),
 ]
 
+const lightWeight: number = 300.0;
+
 const lightColors: Array<Float32Array> = [
-    new Float32Array([300.0, 300.0, 300.0]),
-    new Float32Array([300.0, 300.0, 300.0]),
-    new Float32Array([300.0, 300.0, 300.0]),
-    new Float32Array([300.0, 300.0, 300.0])
+    new Float32Array([lightWeight, lightWeight, lightWeight]),
+    new Float32Array([lightWeight, lightWeight, lightWeight]),
+    new Float32Array([lightWeight, lightWeight, lightWeight]),
+    new Float32Array([lightWeight, lightWeight, lightWeight])
 ];
 
 const gl: WebGL2RenderingContext = getContext('#cvs');
@@ -106,7 +108,7 @@ interface Pos {
     y: number;
 }
 
-const gridCnts: number = 20;
+const gridCnts: number = 30;
 const buildingPoses: Array<mat4> = [];
 function getRandom(start: number, end: number): number {
     return start + (end - start) * Math.random();
