@@ -14,7 +14,7 @@ const lightPositions: Array<Float32Array> = [
     new Float32Array([10.0, -10.0, 10.0]),
 ]
 
-const lightWeight: number = 500.0;
+const lightWeight: number = 50.0;
 
 const lightColors: Array<Float32Array> = [
     new Float32Array([lightWeight, lightWeight, lightWeight]),
@@ -53,7 +53,7 @@ const lightTexture: Texture = new Texture(gl, '../images/wall.jpg', gl.CLAMP_TO_
 const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
 
 // 创建相机
-const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, -30, SCR_WIDTH / SCR_HEIGHT);
+const camera: OrbitCamera = new OrbitCamera(gl, 505, 0, -30, SCR_WIDTH / SCR_HEIGHT);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
@@ -66,7 +66,7 @@ function drawCB(msDt: number, totalTime: number): void {
     const perspective: mat4 = camera.getPerspectiveMatrix();
     const model: mat4 = mat4.create();
     mat4.rotateY(model, model, getRadian(-45));
-    mat4.scale(model, model, [0.25, 0.25, 0.25]);
+    mat4.scale(model, model, [1.25, 1.25, 1.25]);
 
     pbrShaderProgram.use();
     pbrShaderProgram.uniformMatrix4fv('uModel', model);
@@ -125,7 +125,7 @@ function drawCB(msDt: number, totalTime: number): void {
 }
 
 const gridCnts: number = 30;
-const gridSize: number = 5;
+const gridSize: number = 50;
 const buildingPoses: Array<mat4> = [];
 function getRandom(start: number, end: number): number {
     return start + (end - start) * Math.random();
@@ -169,7 +169,7 @@ function generateLights(gridSize: number, gridCnts: number, freeLights: Array<Li
     const halfWidth: number = gridSize * gridCnts * 0.5;
     for (let row = 0; row < gridCnts; row++) {
         for (let col = 0; col < gridCnts; col++) {
-            if (Math.random() < 0.3) {
+            // if (Math.random() < 0.3) {
                 const pos: vec3 = vec3.fromValues(-halfWidth + col * gridSize, 5, -halfWidth + row * gridSize)
                 const currentIdx: number = row * gridCnts + col;
                 const lightColor: vec3 = vec3.fromValues(
@@ -182,7 +182,7 @@ function generateLights(gridSize: number, gridCnts: number, freeLights: Array<Li
                     lightColor,
                     lightId: vec2.fromValues(col, row)
                 })
-            }
+            // }
         }
     }
 }

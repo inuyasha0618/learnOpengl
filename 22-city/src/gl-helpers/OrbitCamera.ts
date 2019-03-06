@@ -43,7 +43,7 @@ class Camera {
     near: number;
     far: number;
 
-    constructor(gl: WebGL2RenderingContext, radius: number, yaw: number = YAW, pitch: number = PITCH, ratio: number, near: number = 1, far: number = 100) {
+    constructor(gl: WebGL2RenderingContext, radius: number, yaw: number = YAW, pitch: number = PITCH, ratio: number, near: number = 1, far: number = 1000) {
         this.canvas = gl.canvas;
         const { left, top }  = this.canvas.getBoundingClientRect();
         this.canvasLeft = left;

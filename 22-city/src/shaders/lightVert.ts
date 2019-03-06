@@ -20,8 +20,8 @@ const cubeVert: string = `
 
     void main() {
         mat4 processedModel = uModel;
-        processedModel[3].xz = getPos(uId, processedModel[3].xz, uTime).xy;
-        processedModel[3].y = noise(vec2(uId) * 0.1, uTime * 0.2) * 1.2 * processedModel[3].y;
+        // processedModel[3].xz = getPos(uId, processedModel[3].xz, uTime).xy;
+        // processedModel[3].y = noise(vec2(uId) * 0.1, uTime * 0.2) * 1.2 * processedModel[3].y;
         vPosWorld = (processedModel * vec4(aPos, 1.0)).xyz;
         vNormal = (transpose(inverse(uModel)) * vec4(aNormal, 1.0)).xyz;
         vTexcord = aTexcord;
