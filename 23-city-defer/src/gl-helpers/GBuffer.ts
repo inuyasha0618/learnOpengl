@@ -9,8 +9,9 @@ enum GBUFFER_TEXTURE_TYPE {
 }
 
 class GBuffer {
-    fbo: WebGLFramebuffer;
-    outputFbo: WebGLFramebuffer;
+    fboGeo: WebGLFramebuffer;
+    fboLighting: WebGLFramebuffer;
+    fboOutput: WebGLFramebuffer;
     depthStencilBuffer: WebGLRenderbuffer;
     gl: WebGL2RenderingContext;
     windowWidth: number;
@@ -30,9 +31,9 @@ class GBuffer {
 
     init(): boolean {
         const gl: WebGL2RenderingContext = this.gl;
-        this.fbo = gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
-        // 创建3个颜色缓冲区
+        this.fboGeo = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboGeo);
+        // 创建数个颜色缓冲区
         for (let i = 0; i < GBUFFER_TEXTURE_TYPE.GBUFFER_NUM_TEXTURES; i++) {
             const texture: WebGLTexture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -56,7 +57,7 @@ class GBuffer {
 
         const fboStatus: number = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
 
-        this.outputFbo = gl.createFramebuffer();
+        this.fboOutput = gl.createFramebuffer();
         this.outputTexture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this.outputTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.windowWidth, this.windowHeight, 0, gl.RGBA, gl.FLOAT, null);
@@ -65,7 +66,7 @@ class GBuffer {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.outputFbo);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboOutput);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.outputTexture, 0);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
@@ -75,14 +76,28 @@ class GBuffer {
         gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, rbo2);
 
         if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
-            console.error(`outputFbo error, status: ${gl.checkFramebufferStatus(gl.FRAMEBUFFER)}`);
+            console.error(`fboOutput error, status: ${gl.checkFramebufferStatus(gl.FRAMEBUFFER)}`);
         } else {
-            console.log('outputFbo ok!');
+            console.log('fboOutput ok!');
         }
 
         if (fboStatus !== gl.FRAMEBUFFER_COMPLETE) {
             console.error(`FBO error, status: ${fboStatus}`);
             return false;
+        }
+
+        this.fboLighting = gl.createFramebuffer();
+
+        const lightingRenderBuffer: WebGLRenderbuffer = gl.createRenderbuffer();
+        gl.bindRenderbuffer(gl.RENDERBUFFER, lightingRenderBuffer);
+        gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 8, gl.RGBA32F, this.windowWidth, this.windowHeight);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboLighting);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, lightingRenderBuffer);
+
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+            console.error(`fboLighting error, status: ${gl.checkFramebufferStatus(gl.FRAMEBUFFER)}`);
+        } else {
+            console.log('fboLighting ok!');
         }
         
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -91,7 +106,7 @@ class GBuffer {
 
     setForGeomPass(): void {
         const gl: WebGL2RenderingContext = this.gl;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboGeo);
         gl.enable(gl.DEPTH_TEST);
         // gl.depthMask(true);
         const drawBuffers: Array<number> = [];
@@ -103,10 +118,12 @@ class GBuffer {
 
     setForLightingPass(): void {
         const gl: WebGL2RenderingContext = this.gl;
-        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.fbo);
-        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.outputFbo);
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.fboGeo);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.fboOutput);
         gl.blitFramebuffer(0, 0, this.windowWidth, this.windowHeight, 0, 0, this.windowWidth, this.windowHeight, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.outputFbo);
+
+        // gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboOutput);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboLighting);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.colorTextures[GBUFFER_TEXTURE_TYPE.GBUFFER_TEXTURE_TYPE_POSITION]);
@@ -131,31 +148,15 @@ class GBuffer {
 
     setForOutput(): void {
         const gl: WebGL2RenderingContext = this.gl;
+
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.fboLighting);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.fboOutput);
+        gl.clearBufferfv(gl.COLOR, 0, [0.0, 0.0, 0.0, 1.0]);
+        gl.blitFramebuffer(0, 0, this.windowWidth, this.windowHeight, 0, 0, this.windowWidth, this.windowHeight, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.outputTexture);
-    }
-
-    output2Screen(): void {
-        // 仅调试使用
-        const gl: WebGL2RenderingContext = this.gl;
-        const winWidth = this.windowWidth;
-        const winHeight = this.windowHeight;
-        const halfWinWidth = 0.5 * winWidth;
-        const halfWinHeight = 0.5 * winHeight;
-
-        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.fbo);
-        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.outputFbo);
-
-        gl.readBuffer(gl.COLOR_ATTACHMENT0 + GBUFFER_TEXTURE_TYPE.GBUFFER_TEXTURE_TYPE_POSITION);
-        gl.blitFramebuffer(0, 0, winWidth, winHeight, 0, 0, halfWinWidth, halfWinHeight, gl.COLOR_BUFFER_BIT, gl.LINEAR);
-
-        gl.readBuffer(gl.COLOR_ATTACHMENT0 + GBUFFER_TEXTURE_TYPE.GBUFFER_TEXTURE_TYPE_ALBEDO);
-        gl.blitFramebuffer(0, 0, winWidth, winHeight, halfWinWidth, 0, winWidth, halfWinHeight, gl.COLOR_BUFFER_BIT, gl.LINEAR);
-
-        gl.readBuffer(gl.COLOR_ATTACHMENT0 + GBUFFER_TEXTURE_TYPE.GBUFFER_TEXTURE_TYPE_NORMAL);
-        gl.blitFramebuffer(0, 0, winWidth, winHeight, 0, halfWinHeight, halfWinWidth, winHeight, gl.COLOR_BUFFER_BIT, gl.LINEAR);
-
     }
 }
 

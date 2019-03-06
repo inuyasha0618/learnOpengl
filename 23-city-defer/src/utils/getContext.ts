@@ -1,6 +1,6 @@
 function getContext(id: string): WebGL2RenderingContext {
     const canvas: HTMLCanvasElement = document.querySelector(id);
-    let gl: WebGL2RenderingContext = canvas.getContext('webgl2');
+    let gl: WebGL2RenderingContext = canvas.getContext('webgl2', { antialias: false });
     if (!gl) throw 'This browser doesnot support webgl2.0';
     return gl;
 }

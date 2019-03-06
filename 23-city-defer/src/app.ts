@@ -191,6 +191,6 @@ window.addEventListener('resize', function() {
     camera.updateRatio(width / height);
 }, false);
 
-setInterval(function() {
-    console.log('fps: ', looper.getFps());
-}, 1000);
+// setInterval(function() {
+//     console.log('fps: ', looper.getFps());
+// }, 1000);
