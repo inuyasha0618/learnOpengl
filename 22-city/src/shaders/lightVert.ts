@@ -6,6 +6,7 @@ const cubeVert: string = `
     out vec3 vPosWorld;
     out vec3 vNormal;
     out vec2 vTexcord;
+    out float vTime;
     uniform mat4 uModel;
     uniform mat4 uView;
     uniform mat4 uPerspective;
@@ -24,6 +25,7 @@ const cubeVert: string = `
         vPosWorld = (processedModel * vec4(aPos, 1.0)).xyz;
         vNormal = (transpose(inverse(uModel)) * vec4(aNormal, 1.0)).xyz;
         vTexcord = aTexcord;
+        vTime = uTime;
         gl_Position = uPerspective * uView * vec4(vPosWorld, 1.0);
     }
 
