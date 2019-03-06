@@ -72,4 +72,9 @@ export default class ShaderProgram {
         const location = this.gl.getUniformLocation(this.program, name);
         this.gl.uniform1i(location, data);
     }
+
+    uniform2i(name: string, x: number, y: number) {
+        const location = this.gl.getUniformLocation(this.program, name);
+        this.gl.uniform2i(location, x, y);
+    }
 }

@@ -13,8 +13,9 @@ uniform float roughness;
 uniform float ao;
 
 // lights
-uniform vec3 lightPositions[4];
-uniform vec3 lightColors[4];
+#define LIGHT_COUNTS 4
+uniform vec3 lightPositions[LIGHT_COUNTS];
+uniform vec3 lightColors[LIGHT_COUNTS];
 
 uniform vec3 camPos;
 

@@ -1,10 +1,11 @@
-import { vec3, mat4 } from 'gl-matrix';
+import { vec3, mat4, vec2 } from 'gl-matrix';
 import RenderLooper from 'render-looper';
 import { getContext, fetchObjFile, resizeCvs2Screen, getRadian } from './utils/index';
 import { ShaderProgram, Mesh, loadTex, OrbitCamera, Texture, drawCube, ObjMesh, drawFakeBuilding } from './gl-helpers/index';
 import phongVertSrc from './shaders/phongVert';
 import pbrFrag from './shaders/pbrFrag';
 import lightFrag from './shaders/lightFrag';
+import lightVert from './shaders/lightVert';
 
 const lightPositions: Array<Float32Array> = [
     new Float32Array([-10.0, 10.0, 10.0]),
@@ -41,9 +42,8 @@ for (let i = 0; i < 4; i++) {
     pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
 }
 
-const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, lightFrag, 'lightShaderProgram');
+const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, lightVert, lightFrag, 'lightShaderProgram');
 lightShaderProgram.use();
-lightShaderProgram.uniform1i('tex', 0);
 
 const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
@@ -57,11 +57,11 @@ const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, -30, SCR_WIDTH / SCR_HEIG
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-function drawCB(msDt: number): void {
+function drawCB(msDt: number, totalTime: number): void {
     let drawCallCnts = 0;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    camera.addYaw(0.5);
+    camera.addYaw(0.1);
     const view: mat4 = camera.getViewMatrix();
     const perspective: mat4 = camera.getPerspectiveMatrix();
     const model: mat4 = mat4.create();
@@ -89,8 +89,20 @@ function drawCB(msDt: number): void {
         mat4.scale(model, model, [0.3, 0.3, 0.3]);
         lightShaderProgram.uniformMatrix4fv('uModel', model);
         lightShaderProgram.uniform3fv('lightColor', lightColors[i]);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, lightTexture.tex);
+        drawCube(gl);
+        ++drawCallCnts;
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
+    for (let light of freeLights) {
+        const model: mat4 = mat4.create();
+        const pos: vec3 = light.lightPos;
+        mat4.translate(model, model, pos);
+        mat4.scale(model, model, [0.3, 0.3, 0.3]);
+        lightShaderProgram.uniformMatrix4fv('uModel', model);
+        lightShaderProgram.uniform3fv('lightColor', light.lightColor);
+        lightShaderProgram.uniform2i('uId', light.lightId[0], light.lightId[1]);
+        lightShaderProgram.uniform1f('uTime', totalTime * 0.001);
         drawCube(gl);
         ++drawCallCnts;
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -112,12 +124,8 @@ function drawCB(msDt: number): void {
     // console.log('drawCallCnts: ', drawCallCnts);
 }
 
-interface Pos {
-    x: number;
-    y: number;
-}
-
 const gridCnts: number = 30;
+const gridSize: number = 5;
 const buildingPoses: Array<mat4> = [];
 function getRandom(start: number, end: number): number {
     return start + (end - start) * Math.random();
@@ -125,7 +133,6 @@ function getRandom(start: number, end: number): number {
 
 function generateBuildingPos(gridSize: number, gridCnts: number) {
     const halfWidth: number = gridSize * gridCnts * 0.5;
-    console.log(halfWidth);
     // 列主序！！！
     const w2Checkerboard: mat4 = mat4.fromValues(
         1, 0, 0, 0,
@@ -144,7 +151,7 @@ function generateBuildingPos(gridSize: number, gridCnts: number) {
             mat4.rotateX(localMx, localMx, getRadian(-90));
             mat4.rotateY(localMx, localMx, getRadian(90 * Math.random()));
             mat4.scale(localMx, localMx, [0.5 * gridSize, 0.5 * gridSize, 0.5 * gridSize]);
-            mat4.scale(localMx, localMx, [getRandom(0.3, 0.5), getRandom(0.5, 1.0), getRandom(0.4, 0.6)])
+            mat4.scale(localMx, localMx, [getRandom(0.3, 0.5), getRandom(0.5, 1.5), getRandom(0.4, 0.6)])
             const finalModelMx: mat4 = mat4.create();
             mat4.multiply(finalModelMx, w2Checkerboard, localMx);
             buildingPoses.push(finalModelMx);
@@ -152,7 +159,38 @@ function generateBuildingPos(gridSize: number, gridCnts: number) {
     }    
 }
 
-generateBuildingPos(5, gridCnts);
+interface LightInfo {
+    lightPos: vec3;
+    lightColor: vec3;
+    lightId: vec2;
+}
+
+function generateLights(gridSize: number, gridCnts: number, freeLights: Array<LightInfo>): void {
+    const halfWidth: number = gridSize * gridCnts * 0.5;
+    for (let row = 0; row < gridCnts; row++) {
+        for (let col = 0; col < gridCnts; col++) {
+            if (Math.random() < 0.3) {
+                const pos: vec3 = vec3.fromValues(-halfWidth + col * gridSize, 5, -halfWidth + row * gridSize)
+                const currentIdx: number = row * gridCnts + col;
+                const lightColor: vec3 = vec3.fromValues(
+                    Math.sin(3.45 * currentIdx * 0.01) * 0.5 + 0.5,
+                    Math.sin(6.56 * currentIdx * 0.01) * 0.5 + 0.5,
+                    Math.sin(8.78 * currentIdx * 0.01) * 0.5 + 0.5,
+                )
+                freeLights.push({
+                    lightPos: pos,
+                    lightColor,
+                    lightId: vec2.fromValues(col, row)
+                })
+            }
+        }
+    }
+}
+
+const freeLights: Array<LightInfo> = [];
+generateLights(gridSize, gridCnts, freeLights);
+
+generateBuildingPos(gridSize, gridCnts);
 
 const looper = new RenderLooper(drawCB).start();
 
