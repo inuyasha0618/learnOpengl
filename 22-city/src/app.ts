@@ -122,6 +122,7 @@ function drawCB(msDt: number, totalTime: number): void {
     instancingPbrShaderProgram.use();
     instancingPbrShaderProgram.uniformMatrix4fv('uView', view);
     instancingPbrShaderProgram.uniformMatrix4fv('uPerspective', perspective);
+    instancingPbrShaderProgram.uniform3fv('camPos', camera.position);
 
     drawFakeBuildings();
 
