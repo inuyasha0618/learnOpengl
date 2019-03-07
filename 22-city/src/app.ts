@@ -126,7 +126,7 @@ if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
     console.log('fboOutput ok!');
 }
 
-const copyFbo: WebGLFramebuffer = gl.createFramebuffer();
+const copyColorFbo: WebGLFramebuffer = gl.createFramebuffer();
 let colorTexture: WebGLTexture = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, colorTexture);
 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, SCR_WIDTH, SCR_HEIGHT, 0, gl.RGBA, gl.FLOAT, null);
@@ -135,14 +135,34 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-gl.bindFramebuffer(gl.FRAMEBUFFER, copyFbo);
+
+gl.bindFramebuffer(gl.FRAMEBUFFER, copyColorFbo);
 gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorTexture, 0);
 
 if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
-    console.error(`copyFbo error, status: ${gl.checkFramebufferStatus(gl.FRAMEBUFFER)}`);
+    console.error(`copyColorFbo error, status: ${gl.checkFramebufferStatus(gl.FRAMEBUFFER)}`);
 } else {
-    console.log('copyFbo ok!');
+    console.log('copyColorFbo ok!');
 }
+
+const copyHighLightColorFbo: WebGLFramebuffer = gl.createFramebuffer();
+let highLightTexture: WebGLTexture = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, highLightTexture);
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, SCR_WIDTH, SCR_HEIGHT, 0, gl.RGBA, gl.FLOAT, null);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+gl.bindFramebuffer(gl.FRAMEBUFFER, copyHighLightColorFbo);
+gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, highLightTexture, 0);
+
+if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+    console.error(`copyHighLightColorFbo error, status: ${gl.checkFramebufferStatus(gl.FRAMEBUFFER)}`);
+} else {
+    console.log('copyHighLightColorFbo ok!');
+}
+
 
 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -187,14 +207,20 @@ function drawCB(msDt: number, totalTime: number): void {
     drawFakeBuildings();
 
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, lightingFbo);
-    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, copyFbo);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, copyColorFbo);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0)
+    gl.blitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, lightingFbo);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, copyHighLightColorFbo);
+    gl.readBuffer(gl.COLOR_ATTACHMENT1)
     gl.blitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, gl.COLOR_BUFFER_BIT, gl.NEAREST);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.clear(gl.COLOR_BUFFER_BIT);
     outputShaderProgram.use();
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, colorTexture);
+    gl.bindTexture(gl.TEXTURE_2D, highLightTexture);
     drawQuad(gl);
 }
 
