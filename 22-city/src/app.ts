@@ -391,19 +391,9 @@ function drawFakeBuildings(): void {
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
         // 使用实例化数组
-        const modelArr: Array<number> = freeLights.reduce((acc: Array<number>, current: LightInfo) => {
-            const currentModel: mat4 = mat4.create();
-            mat4.translate(currentModel, currentModel, current.lightPos);
-            mat4.scale(currentModel, currentModel, [0.09, 0.09, 0.09]);
-            for (let i = 0, size = currentModel.length; i < size; i++) {
-                acc.push(currentModel[i]);
-            }
-            return acc;
-        }, []);
-
-        const colorArr: Array<number> = freeLights.reduce((acc: Array<number>, current: LightInfo) => {
-            for (let val of current.lightColor) {
-                acc.push(val);
+        const modelArr: Array<number> = buildingPoses.reduce((acc: Array<number>, current: mat4) => {
+            for (let i = 0, size = current.length; i < size; i++) {
+                acc.push(current[i]);
             }
             return acc;
         }, []);
@@ -413,35 +403,28 @@ function drawFakeBuildings(): void {
         gl.bindBuffer(gl.ARRAY_BUFFER, modelVBO);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(modelArr), gl.STATIC_DRAW);
 
+        gl.enableVertexAttribArray(3);
+        gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 0);
+
         gl.enableVertexAttribArray(4);
-        gl.vertexAttribPointer(4, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 0);
+        gl.vertexAttribPointer(4, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 4 * Float32Array.BYTES_PER_ELEMENT);
 
         gl.enableVertexAttribArray(5);
-        gl.vertexAttribPointer(5, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 4 * Float32Array.BYTES_PER_ELEMENT);
+        gl.vertexAttribPointer(5, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 8 * Float32Array.BYTES_PER_ELEMENT);
 
         gl.enableVertexAttribArray(6);
-        gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 8 * Float32Array.BYTES_PER_ELEMENT);
-
-        gl.enableVertexAttribArray(7);
-        gl.vertexAttribPointer(7, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 12 * Float32Array.BYTES_PER_ELEMENT);
+        gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 12 * Float32Array.BYTES_PER_ELEMENT);
         
+        gl.vertexAttribDivisor(3, 1);
         gl.vertexAttribDivisor(4, 1);
         gl.vertexAttribDivisor(5, 1);
         gl.vertexAttribDivisor(6, 1);
-        gl.vertexAttribDivisor(7, 1);
-
-        const colorVBO: WebGLBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, colorVBO);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorArr), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(3);
-        gl.vertexAttribPointer(3, 3, gl.FLOAT, false, 0, 0);
-        gl.vertexAttribDivisor(3, 1);
 
         gl.bindVertexArray(null);
 
     }
     gl.bindVertexArray(fakeBuildingsVAO);
-    gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, freeLights.length);
+    gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, buildingPoses.length);
     gl.bindVertexArray(null);
 }
 
