@@ -1,12 +1,14 @@
 import { vec3, mat4, vec2 } from 'gl-matrix';
 import RenderLooper from 'render-looper';
 import { getContext, fetchObjFile, resizeCvs2Screen, getRadian } from './utils/index';
-import { ShaderProgram, Mesh, loadTex, OrbitCamera, Texture, drawCube, ObjMesh, drawFakeBuilding } from './gl-helpers/index';
+import { ShaderProgram, Mesh, loadTex, OrbitCamera, Texture, drawCube, ObjMesh, drawFakeBuilding, drawQuad } from './gl-helpers/index';
 import phongVertSrc from './shaders/phongVert';
 import pbrFrag from './shaders/pbrFrag';
 import lightFrag from './shaders/lightFrag';
 import lightVert from './shaders/lightVert';
 import instancingVert from './shaders/instancingVert';
+import quadFrag from './shaders/quadFrag';
+import quadVert from './shaders/quadVert';
 
 const lightPositions: Array<Float32Array> = [
     new Float32Array([-10.0, 10.0, 10.0]),
@@ -33,6 +35,7 @@ const lightColors2: Array<Float32Array> = [
 
 const gl: WebGL2RenderingContext = getContext('#cvs');
 gl.getExtension('EXT_color_buffer_float');
+const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
 // 获得屏幕尺寸
 
@@ -65,18 +68,68 @@ for (let i = 0; i < 4; i++) {
 const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, lightVert, lightFrag, 'lightShaderProgram');
 // lightShaderProgram.use();
 
-const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
-
+// TODO: 最终输出使用的shader program
+const outputShaderProgram: ShaderProgram = new ShaderProgram(gl, quadVert, quadFrag, 'outputShaderProgram');
+outputShaderProgram.use();
+outputShaderProgram.uniform1i('tex', 0);
+outputShaderProgram.uniform2f('screenSize', SCR_WIDTH, SCR_HEIGHT);
 
 // 创建楼体mesh
 const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
 
 // 创建相机
-const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, -30, SCR_WIDTH / SCR_HEIGHT);
+const camera: OrbitCamera = new OrbitCamera(gl, 30, 0, -25, SCR_WIDTH / SCR_HEIGHT);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
+const temporaryFbo: WebGLFramebuffer = gl.createFramebuffer();
+
+const lightingRenderBuffer: WebGLRenderbuffer = gl.createRenderbuffer();
+gl.bindRenderbuffer(gl.RENDERBUFFER, lightingRenderBuffer);
+gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.RGBA32F, SCR_WIDTH, SCR_HEIGHT);
+
+const depthRenderBuffer: WebGLRenderbuffer = gl.createRenderbuffer();
+gl.bindRenderbuffer(gl.RENDERBUFFER, depthRenderBuffer);
+// gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH32F_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.DEPTH32F_STENCIL8, SCR_WIDTH, SCR_HEIGHT)
+
+gl.bindFramebuffer(gl.FRAMEBUFFER, temporaryFbo);
+gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, lightingRenderBuffer);
+gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, depthRenderBuffer);
+
+console.log(`gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT: ${gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT}`)
+console.log(`gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS: ${gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS}`)
+console.log(`gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: ${gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT}`)
+console.log(`gl.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE: ${gl.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE}`)
+
+if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+    console.error(`fboOutput error, status: ${gl.checkFramebufferStatus(gl.FRAMEBUFFER)}`);
+} else {
+    console.log('fboOutput ok!');
+}
+
+const copyFbo: WebGLFramebuffer = gl.createFramebuffer();
+let colorTexture: WebGLTexture = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, colorTexture);
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, SCR_WIDTH, SCR_HEIGHT, 0, gl.RGBA, gl.FLOAT, null);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+gl.bindFramebuffer(gl.FRAMEBUFFER, copyFbo);
+gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorTexture, 0);
+
+if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+    console.error(`copyFbo error, status: ${gl.checkFramebufferStatus(gl.FRAMEBUFFER)}`);
+} else {
+    console.log('copyFbo ok!');
+}
+
+gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
 function drawCB(msDt: number, totalTime: number): void {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, temporaryFbo);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     camera.addYaw(0.1);
@@ -126,6 +179,16 @@ function drawCB(msDt: number, totalTime: number): void {
 
     drawFakeBuildings();
 
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, temporaryFbo);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, copyFbo);
+    gl.blitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    outputShaderProgram.use();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, colorTexture);
+    drawQuad(gl);
 }
 
 const gridCnts: number = 30;
@@ -175,12 +238,12 @@ function generateLights(gridSize: number, gridCnts: number, freeLights: Array<Li
     for (let row = 0; row < gridCnts; row++) {
         for (let col = 0; col < gridCnts; col++) {
             // if (Math.random() < 0.35) {
-                const pos: vec3 = vec3.fromValues(-halfWidth + col * gridSize, 5, -halfWidth + row * gridSize)
+                const pos: vec3 = vec3.fromValues(-halfWidth + col * gridSize, 7, -halfWidth + row * gridSize)
                 const currentIdx: number = row * gridCnts + col;
                 const lightColor: vec3 = vec3.fromValues(
-                    (Math.sin(3.45 * currentIdx * 0.01) * 0.5 + 0.5) * 10,
-                    (Math.sin(6.56 * currentIdx * 0.01) * 0.5 + 0.5) * 10,
-                    (Math.sin(8.78 * currentIdx * 0.01) * 0.5 + 0.5) * 10,
+                    (Math.sin(3.45 * currentIdx * 0.01) * 0.5 + 0.5) * 500,
+                    (Math.sin(6.56 * currentIdx * 0.01) * 0.5 + 0.5) * 500,
+                    (Math.sin(8.78 * currentIdx * 0.01) * 0.5 + 0.5) * 500,
                 )
                 freeLights.push({
                     lightPos: pos,
