@@ -9,6 +9,7 @@ import lightVert from './shaders/lightVert';
 import instancingVert from './shaders/instancingVert';
 import quadFrag from './shaders/quadFrag';
 import quadVert from './shaders/quadVert';
+import blurFrag from './shaders/blurFrag';
 
 const lightPositions: Array<Float32Array> = [
     new Float32Array([-10.0, 10.0, 10.0]),
@@ -41,6 +42,7 @@ const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
 // 创建shaderprogram
 
+// 主楼模型所使用的shader program
 const pbrShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, pbrFrag, 'pbrShaderProgram');
 pbrShaderProgram.use();
 pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
@@ -53,6 +55,7 @@ for (let i = 0; i < 4; i++) {
     pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
 }
 
+// 假的楼梯所使用的shader program
 const instancingPbrShaderProgram: ShaderProgram = new ShaderProgram(gl, instancingVert, pbrFrag, 'instancingPbrShaderProgram');
 instancingPbrShaderProgram.use();
 instancingPbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
@@ -65,8 +68,8 @@ for (let i = 0; i < 4; i++) {
     instancingPbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
 }
 
+// 光源使用的shader program
 const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, lightVert, lightFrag, 'lightShaderProgram');
-// lightShaderProgram.use();
 
 // TODO: 最终输出使用的shader program
 const outputShaderProgram: ShaderProgram = new ShaderProgram(gl, quadVert, quadFrag, 'outputShaderProgram');
@@ -74,15 +77,25 @@ outputShaderProgram.use();
 outputShaderProgram.uniform1i('tex', 0);
 outputShaderProgram.uniform2f('screenSize', SCR_WIDTH, SCR_HEIGHT);
 
+// 高斯模糊所使用的shader program
+const blurShaderProgram: ShaderProgram = new ShaderProgram(gl, quadVert, blurFrag, 'blurShaderProgram');
+blurShaderProgram.use();
+blurShaderProgram.uniform1i('tex', 0);
+const weight: Array<number> = [0.2270270270, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162];
+for (let i = 0; i < 5; i++) {
+    blurShaderProgram.uniform1f(`weight[${i}]`, weight[i]);
+}
+
+
 // 创建楼体mesh
 const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
 
 // 创建相机
-const camera: OrbitCamera = new OrbitCamera(gl, 30, 0, -25, SCR_WIDTH / SCR_HEIGHT);
+const camera: OrbitCamera = new OrbitCamera(gl, 30, 0, -25, SCR_WIDTH / SCR_HEIGHT, 5.0);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-const temporaryFbo: WebGLFramebuffer = gl.createFramebuffer();
+const lightingFbo: WebGLFramebuffer = gl.createFramebuffer();
 
 const lightingRenderBuffer: WebGLRenderbuffer = gl.createRenderbuffer();
 gl.bindRenderbuffer(gl.RENDERBUFFER, lightingRenderBuffer);
@@ -93,7 +106,7 @@ gl.bindRenderbuffer(gl.RENDERBUFFER, depthRenderBuffer);
 // gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH32F_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
 gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.DEPTH32F_STENCIL8, SCR_WIDTH, SCR_HEIGHT)
 
-gl.bindFramebuffer(gl.FRAMEBUFFER, temporaryFbo);
+gl.bindFramebuffer(gl.FRAMEBUFFER, lightingFbo);
 gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, lightingRenderBuffer);
 gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, depthRenderBuffer);
 
@@ -129,7 +142,7 @@ if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
 function drawCB(msDt: number, totalTime: number): void {
-    gl.bindFramebuffer(gl.FRAMEBUFFER, temporaryFbo);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, lightingFbo);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     camera.addYaw(0.1);
@@ -156,18 +169,6 @@ function drawCB(msDt: number, totalTime: number): void {
     lightShaderProgram.use();
     lightShaderProgram.uniformMatrix4fv('uView', view);
     lightShaderProgram.uniformMatrix4fv('uPerspective', perspective);
-    // for (let i = 0; i < 4; i++) {
-    //     const model: mat4 = mat4.create();
-    //     const pos: vec3 = vec3.fromValues(lightPositions[i][0], lightPositions[i][1], lightPositions[i][2]);
-    //     mat4.translate(model, model, pos);
-    //     mat4.scale(model, model, [0.3, 0.3, 0.3]);
-    //     lightShaderProgram.uniformMatrix4fv('uModel', model);
-    //     lightShaderProgram.uniform3fv('lightColor', lightColors[i]);
-    //     drawCube(gl);
-    //     ++drawCallCnts;
-    //     gl.bindTexture(gl.TEXTURE_2D, null);
-    // }
-
     lightShaderProgram.uniform1f('uTime', totalTime * 0.001);
     drawFreeLights();
 
@@ -179,7 +180,7 @@ function drawCB(msDt: number, totalTime: number): void {
 
     drawFakeBuildings();
 
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, temporaryFbo);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, lightingFbo);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, copyFbo);
     gl.blitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, gl.COLOR_BUFFER_BIT, gl.NEAREST);
 
