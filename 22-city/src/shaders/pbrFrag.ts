@@ -1,7 +1,9 @@
 const pbrFrag: string = `
 #version 300 es
 precision mediump float;
-out vec4 FragColor;
+
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 brightColor;
 in vec2 vTexcord;
 in vec3 vPosWorld;
 in vec3 vNormal;
@@ -122,6 +124,7 @@ void main()
     color = pow(color, vec3(1.0/2.2)); 
 
     FragColor = vec4(color, 1.0);
+    brightColor = vec4(0.0, 0.0, 0.0, 1.0);
 }
 `.trim();
 

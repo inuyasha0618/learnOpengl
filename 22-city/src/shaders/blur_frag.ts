@@ -4,9 +4,10 @@ const source: string = `
     uniform bool horizontal;
     uniform sampler2D tex;
     uniform float weight[5];
-    in vec2 vTexcord;
+    uniform vec2 screenSize;
     out vec4 fragColor;
     void main() {
+        vec2 vTexcord = gl_FragCoord.xy / screenSize;
         vec2 texel_size = vec2(1.0) / float(textureSize(tex, 0));
         vec3 result = weight[0] * texture(tex, vTexcord).rgb;
         if (horizontal) {

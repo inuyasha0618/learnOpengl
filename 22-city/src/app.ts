@@ -9,7 +9,7 @@ import lightVert from './shaders/lightVert';
 import instancingVert from './shaders/instancingVert';
 import quadFrag from './shaders/quadFrag';
 import quadVert from './shaders/quadVert';
-import blurFrag from './shaders/blurFrag';
+import blurFrag from './shaders/blur_frag';
 
 const lightPositions: Array<Float32Array> = [
     new Float32Array([-10.0, 10.0, 10.0]),
@@ -55,7 +55,7 @@ for (let i = 0; i < 4; i++) {
     pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
 }
 
-// 假的楼梯所使用的shader program
+// 假的楼体所使用的shader program
 const instancingPbrShaderProgram: ShaderProgram = new ShaderProgram(gl, instancingVert, pbrFrag, 'instancingPbrShaderProgram');
 instancingPbrShaderProgram.use();
 instancingPbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
@@ -101,6 +101,10 @@ const lightingRenderBuffer: WebGLRenderbuffer = gl.createRenderbuffer();
 gl.bindRenderbuffer(gl.RENDERBUFFER, lightingRenderBuffer);
 gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.RGBA32F, SCR_WIDTH, SCR_HEIGHT);
 
+const highLightRenderBuffer: WebGLRenderbuffer = gl.createRenderbuffer();
+gl.bindRenderbuffer(gl.RENDERBUFFER, highLightRenderBuffer);
+gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.RGBA32F, SCR_WIDTH, SCR_HEIGHT);
+
 const depthRenderBuffer: WebGLRenderbuffer = gl.createRenderbuffer();
 gl.bindRenderbuffer(gl.RENDERBUFFER, depthRenderBuffer);
 // gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH32F_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
@@ -108,6 +112,7 @@ gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.DEPTH32F_STENCIL8, SCR_
 
 gl.bindFramebuffer(gl.FRAMEBUFFER, lightingFbo);
 gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, lightingRenderBuffer);
+gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.RENDERBUFFER, highLightRenderBuffer);
 gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, depthRenderBuffer);
 
 console.log(`gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT: ${gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT}`)
@@ -143,6 +148,7 @@ gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
 function drawCB(msDt: number, totalTime: number): void {
     gl.bindFramebuffer(gl.FRAMEBUFFER, lightingFbo);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     camera.addYaw(0.1);

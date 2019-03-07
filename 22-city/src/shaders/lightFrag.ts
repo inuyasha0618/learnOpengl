@@ -4,7 +4,8 @@ precision mediump float;
 in vec3 vLightColor;
 in vec2 vTexcord;
 in float vTime;
-out vec4 fragColor;
+layout (location = 0) out vec4 fragColor;
+layout (location = 2) out vec4 highLightColor;
 
 float N21(vec2 p);
 
@@ -12,9 +13,12 @@ void main() {
     float exposure = 1.0;
     vec3 color = vLightColor;
     color = mix(0.005, 1.0, ((sin(2. * vTime + N21(vLightColor.xy) * 20. )) * 0.5 + 0.5)) * color;
-    color = vec3(1.0) - exp(-exposure * color);
-    // gamma correct
-    color = pow(color, vec3(1.0/2.2));
+    float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    if (brightness > 1.0) {
+        highLightColor = vec4(color, 1.0);
+    } else {
+        highLightColor = vec4(0.0, 0.0, 0.0, 1.0);
+    }
     fragColor = vec4(color, 1.0);
 }
 
