@@ -10,6 +10,7 @@ import instancingVert from './shaders/instancingVert';
 import quadFrag from './shaders/quadFrag';
 import quadVert from './shaders/quadVert';
 import blurFrag from './shaders/blur_frag';
+import combineFrag from './shaders/combine_frag';
 
 const lightPositions: Array<Float32Array> = [
     new Float32Array([-10.0, 10.0, 10.0]),
@@ -18,7 +19,7 @@ const lightPositions: Array<Float32Array> = [
     new Float32Array([-10.0, 10.0, -10.0]),
 ]
 
-const lightWeight: number = 500.0;
+const lightWeight: number = 100.0;
 
 const lightColors: Array<Float32Array> = [
     new Float32Array([lightWeight, lightWeight * 0.5, 0.0]),
@@ -52,7 +53,7 @@ pbrShaderProgram.uniform1f('metallic', 1.0);
 
 for (let i = 0; i < 4; i++) {
     pbrShaderProgram.uniform3fv(`lightPositions[${i}]`, lightPositions[i]);
-    pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
+    pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors2[i]);
 }
 
 // 假的楼体所使用的shader program
@@ -72,15 +73,19 @@ for (let i = 0; i < 4; i++) {
 const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, lightVert, lightFrag, 'lightShaderProgram');
 
 // TODO: 最终输出使用的shader program
-const outputShaderProgram: ShaderProgram = new ShaderProgram(gl, quadVert, quadFrag, 'outputShaderProgram');
+const outputShaderProgram: ShaderProgram = new ShaderProgram(gl, quadVert, combineFrag, 'outputShaderProgram');
 outputShaderProgram.use();
-outputShaderProgram.uniform1i('tex', 0);
+outputShaderProgram.uniform1i('hdr_tex', 0);
+outputShaderProgram.uniform1i('blur_tex', 1);
+outputShaderProgram.uniform1f('exposure', 1.0);
 outputShaderProgram.uniform2f('screenSize', SCR_WIDTH, SCR_HEIGHT);
+
 
 // 高斯模糊所使用的shader program
 const blurShaderProgram: ShaderProgram = new ShaderProgram(gl, quadVert, blurFrag, 'blurShaderProgram');
 blurShaderProgram.use();
 blurShaderProgram.uniform1i('tex', 0);
+blurShaderProgram.uniform2f('screenSize', SCR_WIDTH, SCR_HEIGHT);
 const weight: Array<number> = [0.2270270270, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162];
 for (let i = 0; i < 5; i++) {
     blurShaderProgram.uniform1f(`weight[${i}]`, weight[i]);
@@ -163,6 +168,32 @@ if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
     console.log('copyHighLightColorFbo ok!');
 }
 
+const pingpong_FBO: Array<WebGLFramebuffer> = [
+    gl.createFramebuffer(),
+    gl.createFramebuffer()
+];
+
+const pingpong_color_buffer: Array<WebGLTexture> = [
+    gl.createTexture(),
+    gl.createTexture()
+]
+
+for (let i: number = 0, size: number = pingpong_FBO.length; i < size; i++) {
+    gl.bindTexture(gl.TEXTURE_2D, pingpong_color_buffer[i]);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, gl.RGBA, gl.FLOAT, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, pingpong_FBO[i]);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pingpong_color_buffer[i], 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+
+
 
 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -186,7 +217,7 @@ function drawCB(msDt: number, totalTime: number): void {
     pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
 
     for (let i = 0; i < 4; i++) {
-        pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
+        pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors2[i]);
     }
 
     buildingMesh.draw();
@@ -216,11 +247,29 @@ function drawCB(msDt: number, totalTime: number): void {
     gl.readBuffer(gl.COLOR_ATTACHMENT1)
     gl.blitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, gl.COLOR_BUFFER_BIT, gl.NEAREST);
 
+    let horizontal: boolean = true;
+    // 高斯模糊
+    blurShaderProgram.use();
+    for (let i = 0; i < 6; i++) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, pingpong_FBO[Number(!horizontal)]);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, i === 0 ? highLightTexture : pingpong_color_buffer[Number(horizontal)]);
+        blurShaderProgram.uniform1i('horizontal', Number(horizontal));
+        drawQuad(gl);
+        horizontal = !horizontal;
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.clear(gl.COLOR_BUFFER_BIT);
     outputShaderProgram.use();
+
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, highLightTexture);
+    gl.bindTexture(gl.TEXTURE_2D, colorTexture);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, pingpong_color_buffer[1]);
     drawQuad(gl);
 }
 
@@ -274,9 +323,9 @@ function generateLights(gridSize: number, gridCnts: number, freeLights: Array<Li
                 const pos: vec3 = vec3.fromValues(-halfWidth + col * gridSize, 7, -halfWidth + row * gridSize)
                 const currentIdx: number = row * gridCnts + col;
                 const lightColor: vec3 = vec3.fromValues(
-                    (Math.sin(3.45 * currentIdx * 0.01) * 0.5 + 0.5) * 500,
-                    (Math.sin(6.56 * currentIdx * 0.01) * 0.5 + 0.5) * 500,
-                    (Math.sin(8.78 * currentIdx * 0.01) * 0.5 + 0.5) * 500,
+                    (Math.sin(3.45 * currentIdx * 0.01) * 0.5 + 0.5) * 50,
+                    (Math.sin(6.56 * currentIdx * 0.01) * 0.5 + 0.5) * 50,
+                    (Math.sin(8.78 * currentIdx * 0.01) * 0.5 + 0.5) * 50,
                 )
                 freeLights.push({
                     lightPos: pos,
