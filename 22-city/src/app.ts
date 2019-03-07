@@ -22,10 +22,10 @@ const lightPositions: Array<Float32Array> = [
 const lightWeight: number = 100.0;
 
 const lightColors: Array<Float32Array> = [
-    new Float32Array([lightWeight, lightWeight * 0.5, 0.0]),
-    new Float32Array([lightWeight, lightWeight * 0.5, 0.0]),
-    new Float32Array([lightWeight, lightWeight * 0.5, 0.0]),
-    new Float32Array([lightWeight, lightWeight * 0.5, 0.0])
+    new Float32Array([lightWeight * 0.1, 0.0, lightWeight * 0.5]),
+    new Float32Array([lightWeight * 0.1, 0.0, lightWeight * 0.5]),
+    new Float32Array([lightWeight * 0.1, 0.0, lightWeight * 0.5]),
+    new Float32Array([lightWeight * 0.1, 0.0, lightWeight * 0.5])
 ];
 
 const lightColors2: Array<Float32Array> = [
@@ -46,7 +46,7 @@ const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 // 主楼模型所使用的shader program
 const pbrShaderProgram: ShaderProgram = new ShaderProgram(gl, phongVertSrc, pbrFrag, 'pbrShaderProgram');
 pbrShaderProgram.use();
-pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
+pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.2, 0.2, 0.2]));
 pbrShaderProgram.uniform1f('ao', 1.0);
 pbrShaderProgram.uniform1f('roughness', 0.3);
 pbrShaderProgram.uniform1f('metallic', 1.0);
@@ -214,7 +214,7 @@ function drawCB(msDt: number, totalTime: number): void {
     pbrShaderProgram.uniformMatrix4fv('uView', view);
     pbrShaderProgram.uniformMatrix4fv('uPerspective', perspective);
     pbrShaderProgram.uniform3fv('camPos', camera.position);
-    pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
+    pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.1, 0.1, 0.1]));
 
     for (let i = 0; i < 4; i++) {
         pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors2[i]);
@@ -319,7 +319,7 @@ function generateLights(gridSize: number, gridCnts: number, freeLights: Array<Li
     const halfWidth: number = gridSize * gridCnts * 0.5;
     for (let row = 0; row < gridCnts; row++) {
         for (let col = 0; col < gridCnts; col++) {
-            // if (Math.random() < 0.35) {
+            if (Math.random() < 0.6) {
                 const pos: vec3 = vec3.fromValues(-halfWidth + col * gridSize, 7, -halfWidth + row * gridSize)
                 const currentIdx: number = row * gridCnts + col;
                 const lightColor: vec3 = vec3.fromValues(
@@ -332,7 +332,7 @@ function generateLights(gridSize: number, gridCnts: number, freeLights: Array<Li
                     lightColor,
                     lightId: vec2.fromValues(col, row)
                 })
-            // }
+            }
         }
     }
 }
