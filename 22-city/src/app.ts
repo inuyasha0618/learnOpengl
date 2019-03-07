@@ -63,7 +63,7 @@ for (let i = 0; i < 4; i++) {
 }
 
 const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, lightVert, lightFrag, 'lightShaderProgram');
-lightShaderProgram.use();
+// lightShaderProgram.use();
 
 const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
@@ -119,28 +119,11 @@ function drawCB(msDt: number, totalTime: number): void {
     drawFreeLights();
 
     // 画建筑
-    // instancingPbrShaderProgram.use();
-    // for (let i = 0; i < 4; i++) {
-    //     instancingPbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors2[i]);
-    // }
-    // instancingPbrShaderProgram.uniform3fv('albedo', new Float32Array([0.1, 0.0, 0.8]));
-    // for (let model of buildingPoses) {
-    //     instancingPbrShaderProgram.uniformMatrix4fv('uModel', model);
-    //     drawFakeBuilding(gl);
-    // }
+    instancingPbrShaderProgram.use();
+    instancingPbrShaderProgram.uniformMatrix4fv('uView', view);
+    instancingPbrShaderProgram.uniformMatrix4fv('uPerspective', perspective);
 
-    pbrShaderProgram.use();
-    for (let i = 0; i < 4; i++) {
-        pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors2[i]);
-    }
-    pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.1, 0.0, 0.8]));
-    for (let model of buildingPoses) {
-        pbrShaderProgram.uniformMatrix4fv('uModel', model);
-        drawFakeBuilding(gl);
-    }
-
-    // instancingPbrShaderProgram.use();
-    // drawFakeBuildings();
+    drawFakeBuildings();
 
 }
 
@@ -443,6 +426,6 @@ window.addEventListener('resize', function() {
     camera.updateRatio(width / height);
 }, false);
 
-// setInterval(function() {
-//     console.log('fps: ', looper.getFps());
-// }, 1000);
+setInterval(function() {
+    console.log('fps: ', looper.getFps());
+}, 1000);
