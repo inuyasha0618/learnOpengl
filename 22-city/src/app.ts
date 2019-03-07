@@ -196,10 +196,6 @@ const freeLights: Array<LightInfo> = [];
 generateLights(gridSize, gridCnts, freeLights);
 
 generateBuildingPos(gridSize, gridCnts);
-console.log('buildingPoses[0]', buildingPoses[0]);
-
-
-
 
 let freeLightsVAO: WebGLVertexArrayObject;
 function drawFreeLights(): void {
@@ -265,7 +261,7 @@ function drawFreeLights(): void {
         const modelArr: Array<number> = freeLights.reduce((acc: Array<number>, current: LightInfo) => {
             const currentModel: mat4 = mat4.create();
             mat4.translate(currentModel, currentModel, current.lightPos);
-            mat4.scale(currentModel, currentModel, [0.09, 0.09, 0.09]);
+            mat4.scale(currentModel, currentModel, [0.05, 0.05, 0.05]);
             for (let i = 0, size = currentModel.length; i < size; i++) {
                 acc.push(currentModel[i]);
             }
@@ -385,8 +381,6 @@ function drawFakeBuildings(): void {
             }
             return acc;
         }, []);
-
-        console.log('modelArr.slice(0, 16)', modelArr.slice(0, 16));
 
 
         const modelVBO: WebGLBuffer = gl.createBuffer();
