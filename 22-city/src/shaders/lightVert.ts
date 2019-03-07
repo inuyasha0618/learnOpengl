@@ -3,15 +3,18 @@ const cubeVert: string = `
     layout (location = 0) in vec3 aPos;
     layout (location = 1) in vec3 aNormal;
     layout (location = 2) in vec2 aTexcord;
+    layout (location = 3) in vec3 aLightColor;
+    layout (location = 4) in mat4 aModel;
+
     out vec3 vPosWorld;
     out vec3 vNormal;
     out vec2 vTexcord;
     out float vTime;
-    uniform mat4 uModel;
+    out vec3 vLightColor;
     uniform mat4 uView;
     uniform mat4 uPerspective;
     uniform float uTime;
-    uniform ivec2 uId;
+    // uniform ivec2 uId;
 
     float N21(vec2 p);
     vec2 N22(vec2 p);
@@ -19,13 +22,15 @@ const cubeVert: string = `
     float noise (in vec2 st, float t);
 
     void main() {
-        mat4 processedModel = uModel;
-        // processedModel[3].xz = getPos(uId, processedModel[3].xz, uTime).xy;
-        // processedModel[3].y = noise(vec2(uId) * 0.1, uTime * 0.2) * 1.2 * processedModel[3].y;
+        mat4 processedModel = aModel;
+        ivec2 uId = ivec2(gl_InstanceID, gl_InstanceID );
+        processedModel[3].xz = getPos(uId, processedModel[3].xz, uTime).xy;
+        processedModel[3].y = noise(vec2(uId) * 0.1, uTime * 0.2) * 1.2 * processedModel[3].y;
         vPosWorld = (processedModel * vec4(aPos, 1.0)).xyz;
-        vNormal = (transpose(inverse(uModel)) * vec4(aNormal, 1.0)).xyz;
+        vNormal = (transpose(inverse(aModel)) * vec4(aNormal, 1.0)).xyz;
         vTexcord = aTexcord;
         vTime = uTime;
+        vLightColor = aLightColor;
         gl_Position = uPerspective * uView * vec4(vPosWorld, 1.0);
     }
 
