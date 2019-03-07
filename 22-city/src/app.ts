@@ -250,7 +250,7 @@ function drawCB(msDt: number, totalTime: number): void {
     let horizontal: boolean = true;
     // 高斯模糊
     blurShaderProgram.use();
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 2; i++) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, pingpong_FBO[Number(!horizontal)]);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.activeTexture(gl.TEXTURE0);
@@ -298,7 +298,7 @@ function generateBuildingPos(gridSize: number, gridCnts: number) {
             const localMx: mat4 = mat4.create();
             mat4.translate(localMx, localMx, [column * gridSize + 0.5 * gridSize, row * gridSize + 0.5 * gridSize, 0]);
             mat4.rotateX(localMx, localMx, getRadian(-90));
-            // mat4.rotateY(localMx, localMx, getRadian(90 * Math.random()));
+            mat4.rotateY(localMx, localMx, getRadian(90 * Math.random()));
             mat4.scale(localMx, localMx, [0.5 * gridSize, 0.5 * gridSize, 0.5 * gridSize]);
             mat4.scale(localMx, localMx, [getRandom(0.3, 0.5), getRandom(0.5, 1.5), getRandom(0.4, 0.6)])
             const finalModelMx: mat4 = mat4.create();
