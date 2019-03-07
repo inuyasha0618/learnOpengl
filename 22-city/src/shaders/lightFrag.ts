@@ -12,7 +12,7 @@ float N21(vec2 p);
 void main() {
     float exposure = 1.0;
     vec3 color = vLightColor;
-    // color = mix(0.005, 1.0, ((sin(2. * vTime + N21(vLightColor.xy) * 20. )) * 0.5 + 0.5)) * color;
+    color = mix(0.005, 1.0, ((sin(2. * vTime + N21(vLightColor.xy) * 20. )) * 0.5 + 0.5)) * color;
     float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
     if (brightness > 1.0) {
         highLightColor = vec4(color, 1.0);
