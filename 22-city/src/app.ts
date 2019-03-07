@@ -6,8 +6,7 @@ import phongVertSrc from './shaders/phongVert';
 import pbrFrag from './shaders/pbrFrag';
 import lightFrag from './shaders/lightFrag';
 import lightVert from './shaders/lightVert';
-import quadFrag from './shaders/quadFrag';
-import quadVert from './shaders/quadVert';
+import instancingVert from './shaders/instancingVert';
 
 const lightPositions: Array<Float32Array> = [
     new Float32Array([-10.0, 10.0, 10.0]),
@@ -51,12 +50,23 @@ for (let i = 0; i < 4; i++) {
     pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
 }
 
+const instancingPbrShaderProgram: ShaderProgram = new ShaderProgram(gl, instancingVert, pbrFrag, 'instancingPbrShaderProgram');
+instancingPbrShaderProgram.use();
+instancingPbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
+instancingPbrShaderProgram.uniform1f('ao', 1.0);
+instancingPbrShaderProgram.uniform1f('roughness', 0.3);
+instancingPbrShaderProgram.uniform1f('metallic', 1.0);
+
+for (let i = 0; i < 4; i++) {
+    instancingPbrShaderProgram.uniform3fv(`lightPositions[${i}]`, lightPositions[i]);
+    instancingPbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
+}
+
 const lightShaderProgram: ShaderProgram = new ShaderProgram(gl, lightVert, lightFrag, 'lightShaderProgram');
 lightShaderProgram.use();
 
 const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
-const lightTexture: Texture = new Texture(gl, '../images/wall.jpg', gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE);
 
 // 创建楼体mesh
 const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
@@ -67,7 +77,6 @@ gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
 function drawCB(msDt: number, totalTime: number): void {
-    let drawCallCnts = 0;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     camera.addYaw(0.1);
@@ -89,7 +98,6 @@ function drawCB(msDt: number, totalTime: number): void {
     }
 
     buildingMesh.draw();
-    ++drawCallCnts;
 
     // 画出光源的位置
     lightShaderProgram.use();
@@ -107,24 +115,20 @@ function drawCB(msDt: number, totalTime: number): void {
     //     gl.bindTexture(gl.TEXTURE_2D, null);
     // }
 
-    // for (let light of freeLights) {
-    //     const model: mat4 = mat4.create();
-    //     const pos: vec3 = light.lightPos;
-    //     mat4.translate(model, model, pos);
-    //     mat4.scale(model, model, [0.09, 0.09, 0.09]);
-    //     lightShaderProgram.uniformMatrix4fv('uModel', model);
-    //     lightShaderProgram.uniform3fv('lightColor', light.lightColor);
-    //     lightShaderProgram.uniform2i('uId', light.lightId[0], light.lightId[1]);
-    //     lightShaderProgram.uniform1f('uTime', totalTime * 0.001);
-    //     drawCube(gl);
-    //     ++drawCallCnts;
-    //     gl.bindTexture(gl.TEXTURE_2D, null);
-    // }
-
     lightShaderProgram.uniform1f('uTime', totalTime * 0.001);
     drawFreeLights();
 
     // 画建筑
+    // instancingPbrShaderProgram.use();
+    // for (let i = 0; i < 4; i++) {
+    //     instancingPbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors2[i]);
+    // }
+    // instancingPbrShaderProgram.uniform3fv('albedo', new Float32Array([0.1, 0.0, 0.8]));
+    // for (let model of buildingPoses) {
+    //     instancingPbrShaderProgram.uniformMatrix4fv('uModel', model);
+    //     drawFakeBuilding(gl);
+    // }
+
     pbrShaderProgram.use();
     for (let i = 0; i < 4; i++) {
         pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors2[i]);
@@ -132,15 +136,12 @@ function drawCB(msDt: number, totalTime: number): void {
     pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.1, 0.0, 0.8]));
     for (let model of buildingPoses) {
         pbrShaderProgram.uniformMatrix4fv('uModel', model);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, lightTexture.tex);
-        // drawCube(gl);
         drawFakeBuilding(gl);
-        ++drawCallCnts;
-        gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
-    // console.log('drawCallCnts: ', drawCallCnts);
+    // instancingPbrShaderProgram.use();
+    // drawFakeBuildings();
+
 }
 
 const gridCnts: number = 30;
@@ -178,6 +179,7 @@ function generateBuildingPos(gridSize: number, gridCnts: number) {
     }    
 }
 
+
 interface LightInfo {
     lightPos: vec3;
     lightColor: vec3;
@@ -188,7 +190,7 @@ function generateLights(gridSize: number, gridCnts: number, freeLights: Array<Li
     const halfWidth: number = gridSize * gridCnts * 0.5;
     for (let row = 0; row < gridCnts; row++) {
         for (let col = 0; col < gridCnts; col++) {
-            if (Math.random() < 0.35) {
+            // if (Math.random() < 0.35) {
                 const pos: vec3 = vec3.fromValues(-halfWidth + col * gridSize, 5, -halfWidth + row * gridSize)
                 const currentIdx: number = row * gridCnts + col;
                 const lightColor: vec3 = vec3.fromValues(
@@ -201,7 +203,7 @@ function generateLights(gridSize: number, gridCnts: number, freeLights: Array<Li
                     lightColor,
                     lightId: vec2.fromValues(col, row)
                 })
-            }
+            // }
         }
     }
 }
@@ -210,6 +212,8 @@ const freeLights: Array<LightInfo> = [];
 generateLights(gridSize, gridCnts, freeLights);
 
 generateBuildingPos(gridSize, gridCnts);
+console.log('buildingPoses[0]', buildingPoses[0]);
+
 
 
 
@@ -398,6 +402,8 @@ function drawFakeBuildings(): void {
             return acc;
         }, []);
 
+        console.log('modelArr.slice(0, 16)', modelArr.slice(0, 16));
+
 
         const modelVBO: WebGLBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, modelVBO);
@@ -437,6 +443,6 @@ window.addEventListener('resize', function() {
     camera.updateRatio(width / height);
 }, false);
 
-setInterval(function() {
-    console.log('fps: ', looper.getFps());
-}, 1000);
+// setInterval(function() {
+//     console.log('fps: ', looper.getFps());
+// }, 1000);
