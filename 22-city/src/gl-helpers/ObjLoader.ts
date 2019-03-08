@@ -25,7 +25,8 @@ class ObjLoader {
         const vertsCache: Object = {};
         while (posLineEnd > posLineStart) {
             const line: string = objTxt.substring(posLineStart, posLineEnd).trim();
-            const lineSplitArr: Array<string> = line.split(' ');
+            line;
+            const lineSplitArr: Array<string> = line.split(/\s+/);
             const command: string = lineSplitArr.shift();
             switch(command) {
                 // 顶点位置
@@ -48,11 +49,17 @@ class ObjLoader {
                     const hasNorm: boolean = !!lineSplitArr[0].split('/')[2];
                     const normProcessed: Object = {};
 
+                    const rawVertNums: number = rawVertPos.length / 3;
+                    const rawUvNums: number = rawVertUV.length / 2;
+                    const rawNormNums: number = rawVertNorm.length / 3;
+
+                    const isReverse: boolean = parseInt(lineSplitArr[0].split('/')[0]) < 0;
+
                     if (!hasNorm) {
                         // 说明没有法向
-                        const point0_idx: number = parseInt(lineSplitArr[0].split('/')[0]) - 1;
-                        const point1_idx: number = parseInt(lineSplitArr[1].split('/')[0]) - 1;
-                        const point2_idx: number = parseInt(lineSplitArr[2].split('/')[0]) - 1;
+                        const point0_idx: number = isReverse ? rawVertNums + parseInt(lineSplitArr[0].split('/')[0]) : parseInt(lineSplitArr[0].split('/')[0]) - 1;
+                        const point1_idx: number = isReverse ? rawVertNums + parseInt(lineSplitArr[1].split('/')[0]) : parseInt(lineSplitArr[1].split('/')[0]) - 1;
+                        const point2_idx: number = isReverse ? rawVertNums + parseInt(lineSplitArr[2].split('/')[0]) : parseInt(lineSplitArr[2].split('/')[0]) - 1;
 
                         const point0: vec3 = vec3.fromValues(rawVertPos[3 * point0_idx], rawVertPos[3 * point0_idx + 1], rawVertPos[3 * point0_idx + 2]);
                         const point1: vec3 = vec3.fromValues(rawVertPos[3 * point1_idx], rawVertPos[3 * point1_idx + 1], rawVertPos[3 * point1_idx + 2]);
@@ -84,16 +91,16 @@ class ObjLoader {
                                 // 说明这是一个之前没遇到过的顶点
                                 const currentVertIdxArr: Array<string> = lineSplitArr[j].split('/');
 
-                                const posIndex: number = parseInt(currentVertIdxArr[0]) - 1;
+                                const posIndex: number = isReverse ? rawVertNums + parseInt(currentVertIdxArr[0]) : parseInt(currentVertIdxArr[0]) - 1;
                                 outputVertPos.push(rawVertPos[3 * posIndex], rawVertPos[3 * posIndex + 1], rawVertPos[3 * posIndex + 2]);
 
                                 if (currentVertIdxArr[1]) {
-                                    const uvIndex: number = parseInt(currentVertIdxArr[1]) - 1;
+                                    const uvIndex: number = isReverse ? rawUvNums + parseInt(currentVertIdxArr[1]) : parseInt(currentVertIdxArr[1]) - 1;
                                     outputVertUV.push(rawVertUV[2 * uvIndex], rawVertUV[2 * uvIndex + 1]);
                                 }
 
                                 if (currentVertIdxArr[2]) {
-                                    const normIndex: number = parseInt(currentVertIdxArr[2]) - 1;
+                                    const normIndex: number = isReverse ? rawNormNums + parseInt(currentVertIdxArr[2]) : parseInt(currentVertIdxArr[2]) - 1;
                                     outputVertNorm.push(rawVertNorm[3 * normIndex], rawVertNorm[3 * normIndex + 1], rawVertNorm[3 * normIndex + 2]);
                                 } else {
                                     outputVertNorm.push(face_flat_normal[0], face_flat_normal[1], face_flat_normal[2]);

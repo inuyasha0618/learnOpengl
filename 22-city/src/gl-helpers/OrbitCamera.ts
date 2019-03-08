@@ -203,7 +203,7 @@ class Camera {
     }
 
     handleKeyPress(e) {
-        const moveMent = this.movementSpeed * 0.1;
+        const moveMent = this.movementSpeed * 0.9;
         const moveMentVec = vec3.create();
         switch (e.keyCode) {
             case FORWARD:

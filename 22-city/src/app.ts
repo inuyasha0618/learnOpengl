@@ -70,10 +70,11 @@ const { width: SCR_WIDTH, height: SCR_HEIGHT } = resizeCvs2Screen(gl);
 
 
 // 创建楼体mesh
-const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
+// const buildingMesh: ObjMesh = new ObjMesh(gl, '../models/Tencent_BinHai.obj');
+const lujiazui: ObjMesh = new ObjMesh(gl, '../models/lujiazui.obj');
 
 // 创建相机
-const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, -30, SCR_WIDTH / SCR_HEIGHT);
+const camera: OrbitCamera = new OrbitCamera(gl, 15, 0, 0, SCR_WIDTH / SCR_HEIGHT, 1.0, 1000.0);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
@@ -99,6 +100,7 @@ function drawCB(msDt: number, totalTime: number): void {
     }
 
     // buildingMesh.draw();
+    lujiazui.draw();
 
     // 画出光源的位置
     // lightShaderProgram.use();
@@ -119,7 +121,7 @@ function drawCB(msDt: number, totalTime: number): void {
 }
 
 const gridCnts: number = 60;
-const gridSize: number = 0.5;
+const gridSize: number = 5;
 const buildingPoses: Array<mat4> = [];
 function getRandom(start: number, end: number): number {
     return start + (end - start) * Math.random();
