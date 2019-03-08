@@ -114,7 +114,15 @@ function drawCB(msDt: number, totalTime: number): void {
     instancingPbrShaderProgram.uniformMatrix4fv('uPerspective', perspective);
     instancingPbrShaderProgram.uniform3fv('camPos', camera.position);
 
-    drawFakeBuildings();
+    // drawFakeBuildings();
+    // pbrShaderProgram.use();
+    // pbrShaderProgram.uniformMatrix4fv('uModel', mat4.create());
+    // pbrShaderProgram.uniformMatrix4fv('uView', view);
+    // pbrShaderProgram.uniformMatrix4fv('uPerspective', perspective);
+    // pbrShaderProgram.uniform3fv('camPos', camera.position);
+    // pbrShaderProgram.uniform3fv('albedo', new Float32Array([0.5, 0.5, 0.5]));
+
+    instancedSimpleBuildings.draw();    
 
 }
 
@@ -394,9 +402,6 @@ function drawFakeBuildings(): void {
             return acc;
         }, []);
 
-        console.log('modelArr.slice(0, 16)', modelArr.slice(0, 16));
-
-
         const modelVBO: WebGLBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, modelVBO);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(modelArr), gl.STATIC_DRAW);
@@ -426,7 +431,14 @@ function drawFakeBuildings(): void {
     gl.bindVertexArray(null);
 }
 
+const modelArr: Array<number> = buildingPoses.reduce((acc: Array<number>, current: mat4) => {
+    for (let i = 0, size = current.length; i < size; i++) {
+        acc.push(current[i]);
+    }
+    return acc;
+}, []);
 
+const instancedSimpleBuildings: ObjMesh = new ObjMesh(gl, '../models/simpleModels/H-sharp.obj', []);
 
 const looper = new RenderLooper(drawCB).start();
 

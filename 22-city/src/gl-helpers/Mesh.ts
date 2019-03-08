@@ -4,7 +4,8 @@ export default class Mesh {
     private VAO: WebGLVertexArrayObject;
     private IBO: WebGLBuffer;
     private counts: number;
-    init(gl: WebGL2RenderingContext, posArr: Array<number>, uvArr: Array<number>, normArr: Array<number>, idxArr: Array<number>) {
+    private instanceNums: number;
+    init(gl: WebGL2RenderingContext, posArr: Array<number>, uvArr: Array<number>, normArr: Array<number>, idxArr: Array<number>, instancedArr: Array<number> = []) {
         this.VAO = gl.createVertexArray();
         gl.bindVertexArray(this.VAO);
 
@@ -34,6 +35,25 @@ export default class Mesh {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, IBO);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(idxArr), gl.STATIC_DRAW);
 
+        if (instancedArr.length) {
+            const modelVBO: WebGLBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, modelVBO);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instancedArr), gl.STATIC_DRAW);
+    
+            gl.enableVertexAttribArray(3);
+            gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 0);
+    
+            gl.enableVertexAttribArray(4);
+            gl.vertexAttribPointer(4, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 4 * Float32Array.BYTES_PER_ELEMENT);
+    
+            gl.enableVertexAttribArray(5);
+            gl.vertexAttribPointer(5, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 8 * Float32Array.BYTES_PER_ELEMENT);
+    
+            gl.enableVertexAttribArray(6);
+            gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 16 * Float32Array.BYTES_PER_ELEMENT, 12 * Float32Array.BYTES_PER_ELEMENT);    
+            this.instanceNums = instancedArr.length / 16;
+        }
+
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
         gl.bindVertexArray(null);
@@ -49,7 +69,11 @@ export default class Mesh {
         const gl: WebGL2RenderingContext = this.gl;
         gl.bindVertexArray(this.VAO);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.IBO);
-        gl.drawElements(gl.TRIANGLES, this.counts, gl.UNSIGNED_INT, 0);
+        if (this.instanceNums) {
+            gl.drawElementsInstanced(gl.TRIANGLES, this.counts, gl.UNSIGNED_INT, 0, this.instanceNums);
+        } else {
+            gl.drawElements(gl.TRIANGLES, this.counts, gl.UNSIGNED_INT, 0);
+        }
         gl.bindVertexArray(null);
     }
 }
