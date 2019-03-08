@@ -7,6 +7,7 @@ import pbrFrag from './shaders/pbrFrag';
 import lightFrag from './shaders/lightFrag';
 import lightVert from './shaders/lightVert';
 import instancingVert from './shaders/instancingVert';
+import river from './river';
 
 const lightPositions: Array<Float32Array> = [
     new Float32Array([-10.0, 10.0, 10.0]),
@@ -97,26 +98,15 @@ function drawCB(msDt: number, totalTime: number): void {
         pbrShaderProgram.uniform3fv(`lightColors[${i}]`, lightColors[i]);
     }
 
-    buildingMesh.draw();
+    // buildingMesh.draw();
 
     // 画出光源的位置
-    lightShaderProgram.use();
-    lightShaderProgram.uniformMatrix4fv('uView', view);
-    lightShaderProgram.uniformMatrix4fv('uPerspective', perspective);
-    // for (let i = 0; i < 4; i++) {
-    //     const model: mat4 = mat4.create();
-    //     const pos: vec3 = vec3.fromValues(lightPositions[i][0], lightPositions[i][1], lightPositions[i][2]);
-    //     mat4.translate(model, model, pos);
-    //     mat4.scale(model, model, [0.3, 0.3, 0.3]);
-    //     lightShaderProgram.uniformMatrix4fv('uModel', model);
-    //     lightShaderProgram.uniform3fv('lightColor', lightColors[i]);
-    //     drawCube(gl);
-    //     ++drawCallCnts;
-    //     gl.bindTexture(gl.TEXTURE_2D, null);
-    // }
+    // lightShaderProgram.use();
+    // lightShaderProgram.uniformMatrix4fv('uView', view);
+    // lightShaderProgram.uniformMatrix4fv('uPerspective', perspective);
 
-    lightShaderProgram.uniform1f('uTime', totalTime * 0.001);
-    drawFreeLights();
+    // lightShaderProgram.uniform1f('uTime', totalTime * 0.001);
+    // drawFreeLights();
 
     // 画建筑
     instancingPbrShaderProgram.use();
@@ -128,8 +118,8 @@ function drawCB(msDt: number, totalTime: number): void {
 
 }
 
-const gridCnts: number = 30;
-const gridSize: number = 5;
+const gridCnts: number = 60;
+const gridSize: number = 0.5;
 const buildingPoses: Array<mat4> = [];
 function getRandom(start: number, end: number): number {
     return start + (end - start) * Math.random();
@@ -148,8 +138,11 @@ function generateBuildingPos(gridSize: number, gridCnts: number) {
     const discard: number = Math.floor(gridCnts * 0.5);
     
     for (let row = 0; row < gridCnts; row++) {
+        const riverPart: Array<number> = river[row + 1] || [];
         for (let column = 0; column < gridCnts; column++) {
-            if (row >= discard -2 && row <= discard && column >= discard - 2 && column <= discard) continue;
+            if (riverPart.length > 0 && column >= riverPart[0] - 1 && column <= riverPart[1] - 1) continue;
+
+            // if (row >= discard -2 && row <= discard && column >= discard - 2 && column <= discard) continue;
             const localMx: mat4 = mat4.create();
             mat4.translate(localMx, localMx, [column * gridSize + 0.5 * gridSize, row * gridSize + 0.5 * gridSize, 0]);
             mat4.rotateX(localMx, localMx, getRadian(-90));
