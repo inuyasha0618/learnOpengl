@@ -17,8 +17,8 @@ gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 const hdrTexture: WebGLTexture = gl.createTexture();
 
 const myHDR = new HDRImage();
-// myHDR.src = './hdr/Mans_Outside_2k.hdr';
-myHDR.src = './hdr/Milkyway_small.hdr';
+myHDR.src = './hdr/Mans_Outside_2k.hdr';
+// myHDR.src = './hdr/Milkyway_small.hdr';
 // myHDR.src = './hdr/Durham 1.hdr';
 // myHDR.src = './hdr/Milkyway_Light.hdr';
 
