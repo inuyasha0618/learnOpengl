@@ -17,10 +17,7 @@ gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 const hdrTexture: WebGLTexture = gl.createTexture();
 
 const myHDR = new HDRImage();
-myHDR.src = './hdr/Mans_Outside_2k.hdr';
-// myHDR.src = './hdr/Milkyway_small.hdr';
-// myHDR.src = './hdr/Durham 1.hdr';
-// myHDR.src = './hdr/Milkyway_Light.hdr';
+myHDR.src = './hdr/RedBlueStudio.hdr';
 
 myHDR.onload = function() {
     gl.bindTexture(gl.TEXTURE_2D, hdrTexture);
@@ -59,7 +56,7 @@ myHDR.onload = function() {
     const envCubemap: WebGLTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, envCubemap);
     for (let i = 0; i < 6; i++) {
-        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA16F, 512, 512, 0, gl.RGBA, gl.FLOAT, null);
+        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA16F, 1024, 1024, 0, gl.RGBA, gl.FLOAT, null);
     }
 
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -75,9 +72,10 @@ myHDR.onload = function() {
     const captureDepthRBO: WebGLRenderbuffer = gl.createRenderbuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, captureFBO);
     gl.bindRenderbuffer(gl.RENDERBUFFER, captureDepthRBO);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, 512, 512);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, 1024, 1024);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, captureDepthRBO);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X, envCubemap, 0);
+
 
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
         console.error(`outputFbo error, status: ${gl.checkFramebufferStatus(gl.FRAMEBUFFER)}`);
@@ -95,7 +93,7 @@ myHDR.onload = function() {
     equirectangularShader.use();
     equirectangularShader.uniform1i('equirectangularMap', 0);
     equirectangularShader.uniformMatrix4fv('projection', capturePerspective);
-    gl.viewport(0, 0, 512, 512);
+    gl.viewport(0, 0, 1024, 1024);
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, envCubemap);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, hdrTexture);
@@ -106,7 +104,7 @@ myHDR.onload = function() {
         drawCube(gl);
     }
 
-    const camera: OrbitCamera = new OrbitCamera(gl, 0.1, 0, 0., SCR_WIDTH / SCR_HEIGHT);
+    const camera: OrbitCamera = new OrbitCamera(gl, 15, 0, 0., SCR_WIDTH / SCR_HEIGHT);
     gl.viewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
