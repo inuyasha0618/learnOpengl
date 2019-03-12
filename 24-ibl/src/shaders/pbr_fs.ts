@@ -1,5 +1,5 @@
 const src: string = `
-#version 300 core
+#version 300 es
 precision mediump float;
 out vec4 FragColor;
 in vec2 TexCoords;
@@ -98,7 +98,7 @@ void main()
         vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);        
         
         vec3 nominator    = NDF * G * F;
-        float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // 0.001 to prevent divide by zero.
+        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // 0.001 to prevent divide by zero.
         vec3 specular = nominator / denominator;
         
          // kS is equal to Fresnel
@@ -147,3 +147,5 @@ void main()
     FragColor = vec4(color , 1.0);
 }
 `.trim();
+
+export default src;
