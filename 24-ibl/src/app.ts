@@ -1,6 +1,6 @@
 import { mat4, vec3 } from 'gl-matrix'
 import RenderLooper from 'render-looper';
-import { ShaderProgram, drawCube, OrbitCamera } from './gl-helpers/index';
+import { ShaderProgram, drawCube, OrbitCamera, drawQuad } from './gl-helpers/index';
 import { getContext, resizeCvs2Screen, getRadian } from './utils/index';
 import background_vs from './shaders/background_vs';
 import background_fs from './shaders/background_fs';
@@ -81,7 +81,7 @@ myHDR.onload = function() {
     const envCubemap: WebGLTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, envCubemap);
     for (let i = 0; i < 6; i++) {
-        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA16F, 1024, 1024, 0, gl.RGBA, gl.FLOAT, null);
+        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA16F, 512, 512, 0, gl.RGBA, gl.FLOAT, null);
     }
 
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -129,16 +129,104 @@ myHDR.onload = function() {
         drawCube(gl);
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    const camera: OrbitCamera = new OrbitCamera(gl, 15, 0, 0., SCR_WIDTH / SCR_HEIGHT);
-    gl.viewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, envCubemap);
     gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
 
-    
+    const irradianceMap: WebGLTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, irradianceMap);
+    for (let i = 0; i < 6; i++) {
+        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA16F, 32, 32, 0, gl.RGBA, gl.FLOAT, null);
+    }
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
+    gl.bindFramebuffer(gl.FRAMEBUFFER, captureFBO);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, captureRBO);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, 32, 32);
+
+    irradianceShader.use();
+    irradianceShader.uniform1i('environmentMap', 0);
+    irradianceShader.uniformMatrix4fv('projection', captureProjection);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, envCubemap);
+
+    gl.viewport(0, 0, 32, 32);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, captureFBO);
+    for (let i = 0; i < 6; i++) {
+        irradianceShader.uniformMatrix4fv('view', captureViews[i]);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubemap, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        drawCube(gl);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    const prefilterMap: WebGLTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, prefilterMap);
+    for (let i = 0; i < 6; i++) {
+        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA16F, 128, 128, 0, gl.RGBA, gl.FLOAT, null);
+    }
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+
+    prefilterShader.use();
+    prefilterShader.uniform1i('environmentMap', 0);
+    prefilterShader.uniformMatrix4fv('projection', captureProjection);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, envCubemap);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, captureFBO);
+    const maxMipLevels: number = 5;
+    for (let mip: number = 0; mip < maxMipLevels; mip++) {
+        const mipWidth: number = 128 * Math.pow(0.5, mip);
+        const mipHeight: number = 128 * Math.pow(0.5, mip);
+        gl.bindRenderbuffer(gl.RENDERBUFFER, captureRBO);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, mipWidth, mipHeight);
+        gl.viewport(0, 0, mipWidth, mipHeight);
+
+        const roughness: number = mip / (maxMipLevels - 1);
+        prefilterShader.uniform1f('roughness', roughness);
+        for (let i = 0; i < 6; i++) {
+            prefilterShader.uniformMatrix4fv('view', captureViews[i]);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, prefilterMap, mip);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            drawCube(gl);
+        }
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    
+    const brdfLUTTexture: WebGLTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, brdfLUTTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG16F, 512, 512, 0, gl.RG, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, captureFBO);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, captureRBO);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, 512, 512);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, brdfLUTTexture, 0);
+
+    gl.viewport(0, 0, 512, 512);
+    brdfShader.use();
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    drawQuad(gl);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    // const projection: mat4 = mat4.create();
+    // mat4.perspective(projection, getRadian() SCR_WIDTH / SCR_HEIGHT)
+    gl.viewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+    gl.clearColor(0.2, 0.3, 0.3, 1.0);
+    const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, -90, SCR_WIDTH / SCR_HEIGHT, 1.0, 1000.0);
 
     function drawCB(): void {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
