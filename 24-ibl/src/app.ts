@@ -62,7 +62,8 @@ gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER,
 gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
 const myHDR = new HDRImage();
-myHDR.src = './hdr/RedBlueStudio.hdr';
+// myHDR.src = './hdr/RedBlueStudio.hdr';
+myHDR.src = './hdr/Mans_Outside_2k.hdr';
 
 myHDR.onload = function() {
     const hdrTexture: WebGLTexture = gl.createTexture();
@@ -147,6 +148,7 @@ myHDR.onload = function() {
     gl.bindFramebuffer(gl.FRAMEBUFFER, captureFBO);
     gl.bindRenderbuffer(gl.RENDERBUFFER, captureRBO);
     gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, 32, 32);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, captureRBO);
 
     irradianceShader.use();
     irradianceShader.uniform1i('environmentMap', 0);
@@ -158,7 +160,7 @@ myHDR.onload = function() {
     gl.bindFramebuffer(gl.FRAMEBUFFER, captureFBO);
     for (let i = 0; i < 6; i++) {
         irradianceShader.uniformMatrix4fv('view', captureViews[i]);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubemap, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceMap, 0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         drawCube(gl);
@@ -222,11 +224,9 @@ myHDR.onload = function() {
     drawQuad(gl);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    // const projection: mat4 = mat4.create();
-    // mat4.perspective(projection, getRadian() SCR_WIDTH / SCR_HEIGHT)
     gl.viewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
     gl.clearColor(0.2, 0.3, 0.3, 1.0);
-    const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, -90, SCR_WIDTH / SCR_HEIGHT, 1.0, 1000.0);
+    const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, 0, SCR_WIDTH / SCR_HEIGHT, 1.0, 1000.0);
 
     function drawCB(): void {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
