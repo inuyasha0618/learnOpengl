@@ -18,30 +18,30 @@ const sin = Math.sin;
 const cos = Math.cos;
 
 class Camera {
-    canvas: HTMLCanvasElement;
+    private canvas: HTMLCanvasElement;
 
-    position: vec3 = vec3.create();
-    front: vec3 = vec3.create();
-    up: vec3 = vec3.create();
-    right: vec3 = vec3.create();
-    yaw: number;
-    pitch: number;
-    radius: number;
+    public position: vec3 = vec3.create();
+    private front: vec3 = vec3.create();
+    private up: vec3 = vec3.create();
+    private right: vec3 = vec3.create();
+    private yaw: number;
+    private pitch: number;
+    private radius: number;
 
-    movementSpeed: number;
-    mouseSensitivity: number;
-    fov: number;
+    private movementSpeed: number;
+    private mouseSensitivity: number;
+    private fov: number;
 
-    prevX: number = 0;
-    prevY: number = 0;
+    private prevX: number = 0;
+    private prevY: number = 0;
 
-    canvasLeft: number;
-    canvasTop: number;
+    private canvasLeft: number;
+    private canvasTop: number;
 
-    lastKeyPressTime: number = 0;
-    ratio: number;
-    near: number;
-    far: number;
+    private lastKeyPressTime: number = 0;
+    private ratio: number;
+    private near: number;
+    private far: number;
 
     constructor(gl: WebGL2RenderingContext, radius: number, yaw: number = YAW, pitch: number = PITCH, ratio: number, near: number = 0.01, far: number = 1000) {
         this.canvas = gl.canvas;
@@ -223,6 +223,10 @@ class Camera {
         this.canvas.addEventListener('mousedown', this.handleMouseDown);
         this.canvas.addEventListener('wheel', this.handleMouseWheel);
         document.addEventListener('keydown', this.handleKeyPress);
+    }
+
+    getPosition(): vec3 {
+        return this.position;
     }
 }
 

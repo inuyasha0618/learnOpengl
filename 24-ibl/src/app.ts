@@ -1,6 +1,6 @@
 import { mat4, vec3 } from 'gl-matrix'
 import RenderLooper from 'render-looper';
-import { ShaderProgram, drawCube, OrbitCamera, drawQuad } from './gl-helpers/index';
+import { ShaderProgram, drawCube, drawCubeSmooth, OrbitCamera, drawQuad, drawQuadWithTex, renderSphere } from './gl-helpers/index';
 import { getContext, resizeCvs2Screen, getRadian } from './utils/index';
 import background_vs from './shaders/background_vs';
 import background_fs from './shaders/background_fs';
@@ -12,6 +12,20 @@ import irradiance_convolution_fs from './shaders/irradiance_convolution_fs';
 import pbr_vs from './shaders/pbr_vs';
 import pbr_fs from './shaders/pbr_fs';
 import prefilter_fs from './shaders/prefilter_fs';
+
+const lightPositions: Array<Float32Array> = [
+    new Float32Array([-10.0, 10.0, 10.0]),
+    new Float32Array([10.0, 10.0, 10.0]),
+    new Float32Array([-10.0, -10.0, 10.0]),
+    new Float32Array([10.0, -10.0, 10.0]),
+];
+
+const lightColors: Array<Float32Array> = [
+    new Float32Array([300.0, 300.0, 300.0]),
+    new Float32Array([300.0, 300.0, 300.0]),
+    new Float32Array([300.0, 300.0, 300.0]),
+    new Float32Array([300.0, 300.0, 300.0]),
+];
 
 const gl: WebGL2RenderingContext = getContext('#cvs');
 gl.getExtension('EXT_color_buffer_float');
@@ -34,22 +48,13 @@ pbrShader.uniform1i('brdfLUT', 2);
 pbrShader.uniform3fv('albedo', new Float32Array([0.5, 0.0, 0.0]));
 pbrShader.uniform1f('ao', 1.0);
 
+for (let i = 0, size = lightPositions.length; i < size; i++) {
+    pbrShader.uniform3fv(`lightPositions[${i}]`, lightPositions[i]);
+    pbrShader.uniform3fv(`lightColors[${i}]`, lightColors[i]);
+}
+
 backgroundShader.use();
 backgroundShader.uniform1i('environmentMap', 0);
-
-const lightPositions: Array<Float32Array> = [
-    new Float32Array([-10.0, 10.0, 10.0]),
-    new Float32Array([10.0, 10.0, 10.0]),
-    new Float32Array([-10.0, -10.0, 10.0]),
-    new Float32Array([10.0, -10.0, 10.0]),
-];
-
-const lightColors: Array<Float32Array> = [
-    new Float32Array([300.0, 300.0, 300.0]),
-    new Float32Array([300.0, 300.0, 300.0]),
-    new Float32Array([300.0, 300.0, 300.0]),
-    new Float32Array([300.0, 300.0, 300.0]),
-];
 
 const captureFBO: WebGLFramebuffer = gl.createFramebuffer();
 const captureRBO: WebGLRenderbuffer = gl.createRenderbuffer();
@@ -221,28 +226,52 @@ myHDR.onload = function() {
     gl.viewport(0, 0, 512, 512);
     brdfShader.use();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    drawQuad(gl);
+    drawQuadWithTex(gl);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     gl.viewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
     gl.clearColor(0.2, 0.3, 0.3, 1.0);
-    const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, 0, SCR_WIDTH / SCR_HEIGHT, 1.0, 1000.0);
+    const camera: OrbitCamera = new OrbitCamera(gl, 45, 0, 0, SCR_WIDTH / SCR_HEIGHT, 0.1, 1000.0);
 
     function drawCB(): void {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         const view: mat4 = camera.getViewMatrix();
         const perspective: mat4 = camera.getPerspectiveMatrix();
+        // const camPos: vec3 = camera.getPosition();
+        const camPos: vec3 = camera.position;
+
+        pbrShader.use();
+        pbrShader.uniformMatrix4fv('view', view);
+        pbrShader.uniformMatrix4fv('projection', perspective);
+        pbrShader.uniform3fv('camPos', camPos);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, irradianceMap);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, prefilterMap);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, brdfLUTTexture);
+
+        const model: mat4 = mat4.create();
+        mat4.translate(model, model, [1.0, 1.0, 1.0]);
+        mat4.scale(model, model, [5.0, 5.0, 5.0])
+        const metallic: number = 0.9;
+        const roughness: number = 0.05;
+        // const metallic: number = 0.2;
+        // const roughness: number = 0.35;
+        pbrShader.uniform1f('metallic', metallic);
+        pbrShader.uniform1f('roughness', roughness);
+        pbrShader.uniformMatrix4fv('model', model);
+        // drawCubeSmooth(gl);
+        // drawCube(gl);
+        renderSphere(gl);
+
+
         backgroundShader.use();
         backgroundShader.uniformMatrix4fv('projection', perspective);
         backgroundShader.uniformMatrix4fv('view', view);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, envCubemap);
 
-        // equirectangularShader.use();
-        // equirectangularShader.uniformMatrix4fv('projection', perspective);
-        // equirectangularShader.uniformMatrix4fv('view', view);
-        // gl.activeTexture(gl.TEXTURE0);
-        // gl.bindTexture(gl.TEXTURE_CUBE_MAP, hdrTexture);
         drawCube(gl);
     }
 

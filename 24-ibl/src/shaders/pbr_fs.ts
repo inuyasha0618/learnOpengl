@@ -72,9 +72,9 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 // ----------------------------------------------------------------------------
 void main()
 {		
-    vec3 N = Normal;
+    vec3 N = normalize(Normal);
     vec3 V = normalize(camPos - WorldPos);
-    vec3 R = reflect(-V, N); 
+    vec3 R = normalize(reflect(-V, N)); 
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
@@ -91,6 +91,7 @@ void main()
         float distance = length(lightPositions[i] - WorldPos);
         float attenuation = 1.0 / (distance * distance);
         vec3 radiance = lightColors[i] * attenuation;
+        // vec3 radiance = lightColors[i];
 
         // Cook-Torrance BRDF
         float NDF = DistributionGGX(N, H, roughness);   
@@ -143,6 +144,11 @@ void main()
     color = color / (color + vec3(1.0));
     // gamma correct
     color = pow(color, vec3(1.0/2.2)); 
+
+    // color = prefilteredColor;
+    // color = textureLod(prefilterMap, N,  roughness * MAX_REFLECTION_LOD).rgb;
+    // color = vec3(max(dot(N, V), 0.0));
+    // color = vec3(brdf, 0.0);
 
     FragColor = vec4(color , 1.0);
 }
